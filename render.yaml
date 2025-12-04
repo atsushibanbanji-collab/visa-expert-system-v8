@@ -12,7 +12,7 @@ services:
 
   # Frontend - React (Static Site)
   - type: web
-    name: visa-expert-frontend
+    name: visa-expert-frontend-v7
     runtime: node
     rootDir: frontend
     buildCommand: npm install && npm run build
