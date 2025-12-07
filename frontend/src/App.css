@@ -407,6 +407,12 @@ body {
   opacity: 0.7;
 }
 
+.rule-card.rule-uncertain {
+  border-left: 4px solid #ecc94b;
+  background: #fffff0;
+  opacity: 0.85;
+}
+
 .rule-header {
   display: flex;
   align-items: center;
@@ -443,6 +449,11 @@ body {
 .rule-status-badge.blocked {
   background: #fed7d7;
   color: #822727;
+}
+
+.rule-status-badge.uncertain {
+  background: #fefcbf;
+  color: #744210;
 }
 
 .rule-status-badge.pending {

@@ -176,34 +176,56 @@ class InferenceEngine:
                 if visa_type in visa_conditions:
                     visa_conditions[visa_type].append(cond)
 
+        # ルール内での条件定義順序を計算（ゴールルールから辿る）
+        # E001: [国籍, 会社, 申請者] → 国籍=0, 会社=1, 申請者=2
+        condition_order_in_rule: Dict[str, int] = {}
+
+        def calc_condition_order(action: str, base_order: int = 0):
+            """ゴールから再帰的に条件の順序を計算"""
+            for rule in self.rules:
+                if rule.action == action:
+                    for idx, cond in enumerate(rule.conditions):
+                        # ルール内での順序を記録（小さい=先に質問）
+                        order = base_order * 1000 + idx
+                        if cond not in condition_order_in_rule or condition_order_in_rule[cond] > order:
+                            condition_order_in_rule[cond] = order
+                        # 導出可能条件なら再帰
+                        if cond in self.derived_conditions:
+                            calc_condition_order(cond, order)
+
+        for goal_rule in goal_rules:
+            calc_condition_order(goal_rule.action, 0)
+
         # 各ビザタイプ内での優先順位を計算
-        def get_condition_priority_within_visa(cond: str, visa_type: str) -> int:
-            """ビザタイプ内での条件の優先度を計算（基本条件を先に、導出可能条件を後に）"""
-            priority = 0
+        def get_condition_priority_within_visa(cond: str, visa_type: str) -> Tuple[int, int]:
+            """
+            ビザタイプ内での条件の優先度を計算
+            戻り値: (メイン優先度, サブ優先度) - 大きい方が先に質問
+            メイン優先度: ゴール直接条件 > 深さ順
+            サブ優先度: ルール内での定義順序（小さい=先）の逆数
+            """
+            main_priority = 0
 
             # ゴールルールの直接条件にはボーナス
             if cond in goal_direct_conditions:
-                priority += 10000
+                main_priority += 10000
 
             # 基本条件を先に、導出可能条件を後に
-            # 基本条件 = 導出可能でない条件
             if cond not in self.derived_conditions:
-                priority += 5000  # 基本条件にボーナス
+                main_priority += 5000
             else:
-                # 導出可能条件は深さが浅いほど後に（深い=より基本に近い）
                 depth = condition_depth.get(cond, 0)
-                priority += depth * 100  # 深い条件ほど優先
+                main_priority += depth * 100
 
             # 複数のビザに関連する条件にはボーナス
             if cond in multi_visa_conditions:
-                priority += 50
+                main_priority += 50
 
-            # 関連するルールの数
-            for rule in self.rules:
-                if cond in rule.conditions and rule.visa_type == visa_type:
-                    priority += 1
+            # サブ優先度: ルール内での定義順序（小さい番号が先に来るように反転）
+            order = condition_order_in_rule.get(cond, 9999)
+            sub_priority = -order  # 小さい順序番号 → 大きい優先度
 
-            return priority
+            return (main_priority, sub_priority)
 
         # 各ビザタイプ内で条件をソート（基本条件が先、導出可能条件が後）
         for visa_type in visa_type_list:
@@ -218,28 +240,80 @@ class InferenceEngine:
             self.question_queue.extend(visa_conditions[visa_type])
 
     def _get_next_question(self) -> Optional[str]:
-        """次の質問を取得"""
-        loop_count = 0
-        max_loops = 1000  # 無限ループ防止
-        while self.question_queue and loop_count < max_loops:
-            loop_count += 1
-            # すでに回答済みまたは導出済みの条件はスキップ
-            candidate = self.question_queue[0]
+        """
+        次の質問を取得
 
-            value = self.working_memory.get_value(candidate)
-            if value is not None and value != FactStatus.PENDING:
-                self.question_queue.pop(0)
+        ロジック:
+        1. ゴールルールから順に、未解決の条件を探す
+        2. 各ルールの条件を定義順に確認
+        3. 条件が未回答なら、その条件を質問
+        4. 条件がUNKNOWNで導出可能なら、その導出ルールを再帰的に探索
+        5. 条件がTRUE/FALSEなら次の条件へ
+        """
+        goal_rules = get_goal_rules()
+
+        for goal_rule in goal_rules:
+            # ゴールルールがブロック/uncertainされていたらスキップ
+            if self.rule_states[goal_rule.id].status in ["blocked", "uncertain"]:
                 continue
 
-            # AND条件最適化：関連ルールが全てブロックされていたらスキップ
-            if self._should_skip_question(candidate):
-                self.question_queue.pop(0)
-                continue
+            # ゴールルールの条件を順に確認
+            question = self._find_next_question_for_rule(goal_rule)
+            if question:
+                self.current_question = question
+                self._mark_related_rules_evaluating(question)
+                return question
 
-            self.current_question = candidate
-            # 現在の質問に関連するルールを「evaluating」状態にする
-            self._mark_related_rules_evaluating(candidate)
-            return candidate
+        return None
+
+    def _find_next_question_for_rule(self, rule, visited: Set[str] = None) -> Optional[str]:
+        """
+        ルールの条件を順に確認し、次の質問を見つける
+
+        ロジック:
+        1. 条件を定義順に確認
+        2. 未回答(None/PENDING)なら、その条件を質問として返す
+        3. UNKNOWNで導出可能条件なら、導出ルールを再帰探索
+        4. TRUE/FALSEなら次の条件へ
+        5. ブロック伝播：FALSEがあればルール全体をスキップ（ANDルールの場合）
+        """
+        if visited is None:
+            visited = set()
+
+        if rule.id in visited:
+            return None
+        visited.add(rule.id)
+
+        # ルールがブロック/uncertainされていたらスキップ
+        if self.rule_states[rule.id].status in ["blocked", "uncertain"]:
+            return None
+
+        for cond in rule.conditions:
+            val = self._get_effective_value(cond)
+
+            # 未回答の条件
+            if val is None or val == FactStatus.PENDING:
+                # この条件を質問として返す
+                if not self._should_skip_question(cond):
+                    return cond
+
+            # UNKNOWNで導出可能条件
+            elif val == FactStatus.UNKNOWN and cond in self.derived_conditions:
+                # 導出ルールを探す
+                deriving_rules = [r for r in self.rules if r.action == cond]
+                for dr in deriving_rules:
+                    # 導出ルールがブロック/uncertainされていなければ再帰探索
+                    if self.rule_states[dr.id].status not in ["blocked", "uncertain"]:
+                        sub_question = self._find_next_question_for_rule(dr, visited.copy())
+                        if sub_question:
+                            return sub_question
+
+            # FALSEの場合、ANDルールならこのルールはブロック
+            elif val == FactStatus.FALSE:
+                if not rule.is_or_rule:
+                    return None
+
+            # TRUE/UNKNOWNは次の条件へ
 
         return None
 
@@ -316,6 +390,58 @@ class InferenceEngine:
 
         return False
 
+    def _has_unresolved_prior_condition(self, condition: str) -> bool:
+        """
+        ルール内で、この条件より前の条件が未解決かチェック
+        例: E001の条件が [国籍, 会社, 申請者] の場合
+        - 「会社」を聞く前に「国籍」が解決している必要がある
+        - 「申請者」を聞く前に「国籍」「会社」が解決している必要がある
+
+        ORルールの場合は例外:
+        - 前の条件がUNKNOWNでも、次の条件を聞ける
+        - どちらか一方がTRUEなら発火するため
+        """
+        # この条件を使う全てのルールをチェック
+        related_rules = [r for r in self.rules if condition in r.conditions]
+
+        for rule in related_rules:
+            # ORルールの場合、順序制約は緩和する
+            # （どの条件がTRUEでも発火するため、並行して聞いてよい）
+            if rule.is_or_rule:
+                continue
+
+            # このルール内での条件の位置を取得
+            try:
+                cond_index = rule.conditions.index(condition)
+            except ValueError:
+                continue
+
+            # この条件より前の条件をチェック
+            for i in range(cond_index):
+                prior_cond = rule.conditions[i]
+                # hypothesesのTRUE/FALSEを優先（導出された値を考慮）
+                val = self._get_effective_value(prior_cond)
+
+                # 前の条件が未解決（None, PENDING）の場合
+                if val is None or val == FactStatus.PENDING:
+                    # この前の条件はまだ質問されていない
+                    return True
+
+                # TRUE/FALSEが確定していれば、この前の条件は解決済み
+                if val == FactStatus.TRUE or val == FactStatus.FALSE:
+                    continue  # 次の前条件をチェック
+
+                # UNKNOWNの場合、導出可能条件なら下位条件が解決するまで待つ
+                if val == FactStatus.UNKNOWN and prior_cond in self.derived_conditions:
+                    # 下位条件がまだ探索中かチェック
+                    deriving_rules = [r for r in self.rules if r.action == prior_cond]
+                    for dr in deriving_rules:
+                        if self.rule_states[dr.id].status not in ["fired", "blocked", "uncertain"]:
+                            # まだ評価中のルールがある
+                            return True
+
+        return False
+
     def _should_skip_question(self, condition: str) -> bool:
         """この質問をスキップすべきかチェック"""
         # この条件を使うルールを取得
@@ -327,6 +453,10 @@ class InferenceEngine:
         # 【根本治療】再帰的に上位条件をチェック
         # いずれかの上位条件（祖先）が既にTRUEなら、この条件は聞く必要がない
         if self._is_ancestor_condition_resolved(condition):
+            return True
+
+        # 【順序制御】ルール内で前の条件が未解決なら、この条件はスキップ
+        if self._has_unresolved_prior_condition(condition):
             return True
 
         # AND条件最適化：全ての関連ルールがブロックされているかチェック
@@ -411,11 +541,20 @@ class InferenceEngine:
         if status == FactStatus.UNKNOWN and condition in self.derived_conditions:
             self._expand_unknown_condition(condition)
 
-        # ルール評価を更新
-        self._evaluate_rules()
+        # ルール評価と仮説導出をループで収束するまで繰り返す
+        # （E003発火 → 投資条件TRUE導出 → E002発火 → 会社条件TRUE導出 のような連鎖を処理）
+        max_iterations = 10
+        for _ in range(max_iterations):
+            prev_hypotheses = dict(self.working_memory.hypotheses)
+            prev_statuses = {rid: s.status for rid, s in self.rule_states.items()}
 
-        # 導出された仮説をチェック
-        self._propagate_inferences()
+            self._evaluate_rules()
+            self._propagate_inferences()
+
+            # 変化がなければ収束
+            if (self.working_memory.hypotheses == prev_hypotheses and
+                all(self.rule_states[rid].status == prev_statuses[rid] for rid in self.rule_states)):
+                break
 
         # 次の質問を取得
         next_q = self._get_next_question()
@@ -435,6 +574,33 @@ class InferenceEngine:
 
         return result
 
+    def _get_effective_value(self, condition: str) -> Optional[FactStatus]:
+        """
+        条件の実効値を取得
+        導出可能条件の場合、hypothesesのTRUEはfindingsのUNKNOWNより優先する
+        （ユーザーが「わからない」と回答しても、下位ルールで導出されたTRUEを使う）
+        """
+        finding_val = self.working_memory.findings.get(condition)
+        hypo_val = self.working_memory.hypotheses.get(condition)
+
+        # 導出可能条件で、hypothesesにTRUEがある場合は優先
+        if condition in self.derived_conditions:
+            if hypo_val == FactStatus.TRUE:
+                return FactStatus.TRUE
+            if hypo_val == FactStatus.FALSE:
+                # 全ての導出ルールがブロックされている場合のFALSE
+                return FactStatus.FALSE
+
+        # findingsがあればそれを返す
+        if finding_val is not None:
+            return finding_val
+
+        # hypothesesがあればそれを返す
+        if hypo_val is not None:
+            return hypo_val
+
+        return None
+
     def _evaluate_rules(self):
         """全ルールを評価してステータスを更新"""
         for rule_id, state in self.rule_states.items():
@@ -447,7 +613,8 @@ class InferenceEngine:
             has_unknown = False
 
             for cond in rule.conditions:
-                val = self.working_memory.get_value(cond)
+                # 実効値を取得（hypothesesのTRUEをfindingsのUNKNOWNより優先）
+                val = self._get_effective_value(cond)
                 state.checked_conditions[cond] = val if val else FactStatus.PENDING
 
                 if val == FactStatus.TRUE:
@@ -462,16 +629,65 @@ class InferenceEngine:
                     all_true = False
 
             # ルールステータスを更新
+            # blocked: FALSEが原因で不可（赤表示）
+            # uncertain: UNKNOWNが原因で判定不能（黄色表示）
             if rule.is_or_rule:
+                # ORルール: 1つでもTRUEなら発火
                 if any_true:
                     state.status = "fired"
-                elif all([state.checked_conditions.get(c) == FactStatus.FALSE for c in rule.conditions]):
-                    state.status = "blocked"
+                else:
+                    # 全条件がFALSEまたはUNKNOWN（解決不能）かチェック
+                    all_resolved_negative = True
+                    has_any_unknown = False
+                    has_any_false = False
+                    for cond in rule.conditions:
+                        val = state.checked_conditions.get(cond)
+                        if val == FactStatus.TRUE:
+                            all_resolved_negative = False
+                            break
+                        elif val == FactStatus.UNKNOWN:
+                            has_any_unknown = True
+                            # UNKNOWNだが、導出可能条件でまだ評価中ならブロックしない
+                            if cond in self.derived_conditions:
+                                deriving_rules = [r for r in self.rules if r.action == cond]
+                                for dr in deriving_rules:
+                                    if self.rule_states[dr.id].status not in ["fired", "blocked", "uncertain"]:
+                                        all_resolved_negative = False
+                                        break
+                                if not all_resolved_negative:
+                                    break
+                            # 基本条件のUNKNOWNは解決不能（uncertain扱い）
+                        elif val == FactStatus.FALSE:
+                            has_any_false = True
+                        elif val is None or val == FactStatus.PENDING:
+                            # まだ回答されていない条件がある
+                            all_resolved_negative = False
+                            break
+
+                    if all_resolved_negative:
+                        # UNKNOWNが含まれていれば uncertain、FALSEのみなら blocked
+                        if has_any_unknown and not has_any_false:
+                            state.status = "uncertain"
+                        elif has_any_unknown:
+                            # UNKNOWNとFALSE両方 → uncertain（判定不能を優先）
+                            state.status = "uncertain"
+                        else:
+                            state.status = "blocked"
             else:
+                # ANDルール: 全条件TRUEで発火
                 if all_true:
                     state.status = "fired"
                 elif any_false:
+                    # FALSEがあればブロック
                     state.status = "blocked"
+                elif has_unknown:
+                    # UNKNOWNがある場合、このルールがゴールルールかどうかで判定を分ける
+                    # 非ゴールルール（導出ルール）はUNKNOWNでuncertain
+                    # ゴールルールは後続条件を聞く価値があるのでブロックしない
+                    goal_rules = get_goal_rules()
+                    is_goal_rule = rule.id in [gr.id for gr in goal_rules]
+                    if not is_goal_rule:
+                        state.status = "uncertain"
 
     def _propagate_inferences(self):
         """発火したルールから仮説を導出"""
@@ -492,13 +708,13 @@ class InferenceEngine:
                         # 依存ルールのブロック状態を更新
                         self._update_dependent_rules(action, FactStatus.TRUE)
 
-                elif state.status == "blocked":
+                elif state.status in ["blocked", "uncertain"]:
                     action = state.rule.action
-                    # OR条件でない場合のみブロック伝播
+                    # OR条件でない場合のみブロック/uncertain伝播
                     if not state.rule.is_or_rule:
                         can_derive = False
                         for other_state in self.rule_states.values():
-                            if other_state.rule.action == action and other_state.status != "blocked":
+                            if other_state.rule.action == action and other_state.status not in ["blocked", "uncertain"]:
                                 can_derive = True
                                 break
                         if not can_derive and self.working_memory.get_value(action) != FactStatus.FALSE:
@@ -518,7 +734,7 @@ class InferenceEngine:
 
         for goal_rule in goal_rules:
             state = self.rule_states.get(goal_rule.id)
-            if state and state.status not in ["fired", "blocked"]:
+            if state and state.status not in ["fired", "blocked", "uncertain"]:
                 # まだ評価中のゴールがある
                 return False
 

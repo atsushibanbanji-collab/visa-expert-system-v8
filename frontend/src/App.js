@@ -247,7 +247,7 @@ function App() {
           <div className="rules-container">
             {/* ビザタイプ別にグループ化（評価中・評価済みのルールのみ表示） */}
             {['E', 'L', 'B', 'H-1B', 'J-1'].map(visaType => {
-              // pending以外（evaluating, fired, blocked）のルールのみ表示
+              // pending以外（evaluating, fired, blocked, uncertain）のルールのみ表示
               const visaRules = rulesStatus.filter(r =>
                 r.visa_type === visaType && r.status !== 'pending'
               );
@@ -275,6 +275,7 @@ function RuleCard({ rule }) {
     switch (status) {
       case 'fired': return 'rule-fired';
       case 'blocked': return 'rule-blocked';
+      case 'uncertain': return 'rule-uncertain';
       case 'evaluating': return 'rule-evaluating';
       default: return 'rule-pending';
     }
@@ -298,7 +299,7 @@ function RuleCard({ rule }) {
         <span className="rule-id">{rule.id}</span>
         <span className="rule-name">{rule.name}</span>
         <span className={`rule-status-badge ${rule.status}`}>
-          {rule.status === 'fired' ? '発火' : rule.status === 'blocked' ? '不可' : '評価中'}
+          {rule.status === 'fired' ? '発火' : rule.status === 'blocked' ? '不可' : rule.status === 'uncertain' ? '不明' : '評価中'}
         </span>
       </div>
 
