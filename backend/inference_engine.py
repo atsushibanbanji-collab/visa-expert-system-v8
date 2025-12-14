@@ -139,9 +139,11 @@ class InferenceEngine:
         goal_rules = get_goal_rules()
 
         for goal_rule in goal_rules:
-            # ゴールルールがブロックされていたらスキップ
-            # uncertainは探索を続ける（導出可能条件の下位ルールがまだ評価できる可能性がある）
-            if self.rule_states[goal_rule.id].status == RuleStatus.BLOCKED:
+            # ゴールルールが解決済み（FIRED/BLOCKED）ならスキップ
+            # FIRED: すでに申請可能と判定されたので、さらなる質問は不要
+            # BLOCKED: 不可と判定されたので、さらなる質問は不要
+            # UNCERTAIN: 探索を続ける（導出可能条件の下位ルールがまだ評価できる可能性）
+            if self.rule_states[goal_rule.id].status in (RuleStatus.BLOCKED, RuleStatus.FIRED):
                 continue
 
             # ゴールルールの条件を順に確認
@@ -171,8 +173,11 @@ class InferenceEngine:
             return None
         visited.add(rule.id)
 
-        # ルールがブロックされていたらスキップ（uncertainは質問を続ける）
-        if self.rule_states[rule.id].status == RuleStatus.BLOCKED:
+        # ルールが解決済み（FIRED/BLOCKED）ならスキップ
+        # FIRED: ORルールで1つの条件がTRUEなら、残りの条件を質問する必要なし
+        # BLOCKED: ANDルールでFALSEがあれば、他の条件を質問する必要なし
+        # UNCERTAIN: 質問を続ける（導出可能条件の下位ルールがまだ評価できる可能性）
+        if self.rule_states[rule.id].status in (RuleStatus.BLOCKED, RuleStatus.FIRED):
             return None
 
         for cond in rule.conditions:
@@ -187,8 +192,8 @@ class InferenceEngine:
                 # 導出ルールを探す
                 deriving_rules = self._get_deriving_rules(cond)
                 for dr in deriving_rules:
-                    # 導出ルールがブロックされていなければ再帰探索（uncertainでも続ける）
-                    if self.rule_states[dr.id].status != RuleStatus.BLOCKED:
+                    # 導出ルールがFIRED/BLOCKEDなら再帰探索不要
+                    if self.rule_states[dr.id].status not in (RuleStatus.BLOCKED, RuleStatus.FIRED):
                         sub_question = self._find_next_question_for_rule(dr, visited.copy())
                         if sub_question:
                             return sub_question
@@ -198,7 +203,12 @@ class InferenceEngine:
                 if not rule.is_or_rule:
                     return None
 
-            # TRUE/UNKNOWNは次の条件へ
+            # TRUEの場合、ORルールならこのルールは発火済み（質問不要）
+            elif val == FactStatus.TRUE:
+                if rule.is_or_rule:
+                    return None
+
+            # UNKNOWNは次の条件へ
 
         return None
 
