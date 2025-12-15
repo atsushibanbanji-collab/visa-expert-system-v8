@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Any
 import json
 
 from inference_engine import InferenceEngine
-from knowledge_base import get_all_rules, get_goal_rules, VISA_RULES, save_rules, reload_rules, RuleType
+from knowledge_base import get_all_rules, get_goal_rules, VISA_RULES, save_rules, reload_rules, RuleType, VISA_TYPE_ORDER
 
 app = FastAPI(
     title="ビザ選定エキスパートシステム",
@@ -163,11 +163,14 @@ async def get_state(session_id: str):
 
 @app.get("/api/rules")
 async def get_rules(visa_type: Optional[str] = None):
-    """ルール一覧を取得"""
+    """ルール一覧を取得（E→L→H-1B→B→J-1順）"""
     rules = get_all_rules()
 
     if visa_type:
         rules = [r for r in rules if r.visa_type == visa_type]
+
+    # ビザタイプ順でソート
+    rules = sorted(rules, key=lambda r: VISA_TYPE_ORDER.get(r.visa_type, 99))
 
     return {
         "rules": [

@@ -491,10 +491,14 @@ def get_rules_by_visa_type(visa_type: str) -> List[Rule]:
     return [r for r in VISA_RULES if r.visa_type == visa_type]
 
 
+# ビザタイプの質問順序
+VISA_TYPE_ORDER = {"E": 0, "L": 1, "H-1B": 2, "B": 3, "J-1": 4}
+
 def get_goal_rules() -> List[Rule]:
-    """ゴールルール（最終結論を導くルール）を取得"""
+    """ゴールルール（最終結論を導くルール）を取得（E→L→H-1B→B→J-1順）"""
     goal_actions = _load_goal_actions_from_json()
-    return [r for r in VISA_RULES if r.action in goal_actions]
+    goal_rules = [r for r in VISA_RULES if r.action in goal_actions]
+    return sorted(goal_rules, key=lambda r: VISA_TYPE_ORDER.get(r.visa_type, 99))
 
 
 def get_all_base_conditions() -> set:

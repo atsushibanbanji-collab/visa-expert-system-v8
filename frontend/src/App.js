@@ -198,7 +198,7 @@ function ConsultationPage({ onBack }) {
           <h2>推論過程</h2>
         </div>
         <div className="rules-container">
-          {['E', 'L', 'B', 'H-1B', 'J-1'].map(visaType => {
+          {['E', 'L', 'H-1B', 'B', 'J-1'].map(visaType => {
             const visaRules = rulesStatus.filter(r => r.visa_type === visaType && r.status !== 'pending');
             if (visaRules.length === 0) return null;
             return (
@@ -434,7 +434,7 @@ function AdminPage() {
         </div>
       )}
 
-      <div className="admin-content">
+      <div className={`admin-content ${selectedRule ? 'with-editor' : ''}`}>
         <div className="rules-list">
           {loading ? (
             <p>読み込み中...</p>

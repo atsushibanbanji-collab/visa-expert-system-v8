@@ -6,7 +6,7 @@ Smalltalk資料のConsultation/WorkingMemoryクラスに相当
 from typing import Dict, List, Optional, Set, Tuple, Any
 from dataclasses import dataclass, field
 from enum import Enum
-from knowledge_base import Rule, VISA_RULES, get_all_rules, get_goal_rules, get_derived_conditions
+from knowledge_base import Rule, VISA_RULES, get_all_rules, get_goal_rules, get_derived_conditions, VISA_TYPE_ORDER
 
 
 class FactStatus(Enum):
@@ -491,7 +491,7 @@ class InferenceEngine:
         }
 
     def _get_rules_display_info(self) -> List[Dict[str, Any]]:
-        """推論画面表示用のルール情報を取得"""
+        """推論画面表示用のルール情報を取得（E→L→H-1B→B→J-1順）"""
         result = []
 
         for rule_id, state in self.rule_states.items():
@@ -520,6 +520,9 @@ class InferenceEngine:
                 "is_and_rule": not rule.is_or_rule,
                 "operator": "AND" if not rule.is_or_rule else "OR"
             })
+
+        # ビザタイプ順でソート
+        result.sort(key=lambda r: VISA_TYPE_ORDER.get(r["visa_type"], 99))
 
         return result
 

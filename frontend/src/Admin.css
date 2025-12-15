@@ -7,7 +7,7 @@
 /* ========== 管理画面 ========== */
 .admin-page {
   flex: 1;
-  padding: 24px;
+  padding: 16px;
   background: #f5f7fa;
   overflow-y: auto;
 }
@@ -97,9 +97,13 @@
 }
 
 .admin-content {
+  display: block;
+}
+
+.admin-content.with-editor {
   display: grid;
   grid-template-columns: 1fr 400px;
-  gap: 24px;
+  gap: 16px;
 }
 
 .rules-list {
