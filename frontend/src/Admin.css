@@ -164,151 +164,310 @@
   background: #fff5f5;
 }
 
-/* ルール編集フォーム */
-.rule-editor {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  padding: 24px;
-  position: sticky;
-  top: 24px;
-}
 
-.rule-editor h3 {
-  font-size: 1.1rem;
-  color: #1a365d;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.form-group {
-  margin-bottom: 16px;
-}
-
-.form-group label {
-  display: block;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #4a5568;
-  margin-bottom: 6px;
-}
-
-.form-group input[type="text"],
-.form-group select {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  font-size: 0.9rem;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: #3182ce;
-  box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
-}
-
-.form-group input:disabled {
-  background: #f7fafc;
-  color: #a0aec0;
-}
-
-.radio-group {
+/* ========== 管理画面カード形式 ========== */
+.admin-rules-cards {
   display: flex;
-  gap: 20px;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.radio-group label {
+.loading-text {
+  padding: 20px;
+  text-align: center;
+  color: #718096;
+}
+
+.admin-rule-card {
+  background: white;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  padding: 10px;
+}
+
+.admin-rule-card.has-changes {
+  border: 2px solid #ed8936;
+  background: #fffaf0;
+}
+
+/* メインレイアウト: 移動ボタン | コンテンツ | 削除ボタン */
+.rule-card-main {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.rule-move-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 2px;
+}
+
+.rule-move-btn {
+  width: 22px;
+  height: 18px;
+  padding: 0;
+  background: #edf2f7;
+  border: 1px solid #e2e8f0;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.rule-move-btn:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.rule-move-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.rule-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.rule-action-buttons {
+  padding-top: 2px;
+}
+
+.rule-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.rule-number {
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #718096;
+  min-width: 32px;
+}
+
+.delete-btn {
+  padding: 4px 8px;
+  border: 1px solid #fed7d7;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: #e53e3e;
+}
+
+.delete-btn:hover {
+  background: #fff5f5;
+}
+
+/* ルールカード本体 */
+.rule-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rule-card-conclusion {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-weight: normal;
-  cursor: pointer;
+  padding: 4px 8px;
+  background: #f0fff4;
+  border-radius: 4px;
 }
 
-.condition-input {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
+.rule-card-conclusion .label {
+  font-weight: 600;
+  color: #276749;
+  font-size: 0.75rem;
+  min-width: 40px;
 }
 
-.condition-input input {
+.rule-card-conclusion input {
   flex: 1;
-}
-
-.remove-btn {
-  width: 36px;
-  height: 36px;
-  background: #fed7d7;
-  color: #e53e3e;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 1.2rem;
-  font-weight: bold;
-}
-
-.add-btn {
-  padding: 8px 16px;
-  background: #f7fafc;
-  border: 1px dashed #cbd5e0;
-  border-radius: 6px;
-  color: #4a5568;
-  cursor: pointer;
-  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid #c6f6d5;
+  border-radius: 3px;
   font-size: 0.85rem;
 }
 
-.add-btn:hover {
-  background: #edf2f7;
+.rule-card-conditions {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 4px 8px;
+  background: #ebf8ff;
+  border-radius: 4px;
 }
 
-.form-actions {
+.rule-card-conditions .label {
+  font-weight: 600;
+  color: #2b6cb0;
+  font-size: 0.75rem;
+  min-width: 40px;
+  padding-top: 4px;
+}
+
+.conditions-edit-list {
+  flex: 1;
   display: flex;
-  gap: 12px;
-  margin-top: 24px;
-  padding-top: 20px;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.condition-edit-row {
+  display: flex;
+  gap: 4px;
+}
+
+.condition-edit-row input {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid #bee3f8;
+  border-radius: 3px;
+  font-size: 0.85rem;
+}
+
+.cond-remove-btn {
+  width: 24px;
+  height: 24px;
+  background: #fed7d7;
+  color: #c53030;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: bold;
+  padding: 0;
+}
+
+.cond-remove-btn:hover {
+  background: #feb2b2;
+}
+
+.cond-move-btn {
+  width: 24px;
+  height: 24px;
+  background: #edf2f7;
+  color: #4a5568;
+  border: 1px solid #e2e8f0;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0;
+}
+
+.cond-move-btn:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.cond-move-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.cond-add-btn {
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px dashed #90cdf4;
+  border-radius: 3px;
+  color: #3182ce;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.cond-add-btn:hover {
+  background: #ebf8ff;
+}
+
+/* ヘッダー入力フィールド */
+.rule-id-input {
+  width: 55px;
+  padding: 4px 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  background: #f7fafc;
+  font-family: monospace;
+}
+
+.rule-id-input:disabled {
+  background: #edf2f7;
+  color: #718096;
+}
+
+.rule-visa-select,
+.rule-type-select {
+  padding: 4px 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  background: white;
+}
+
+.rule-name-input {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 3px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1a365d;
+  min-width: 100px;
+}
+
+/* 保存/キャンセルボタン */
+.rule-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
   border-top: 1px solid #e2e8f0;
 }
 
-.save-btn {
+.rule-card-actions .save-btn {
   flex: 1;
-  padding: 12px;
+  padding: 6px;
   background: #48bb78;
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 0.95rem;
   font-weight: 500;
+  font-size: 0.85rem;
 }
 
-.save-btn:hover {
+.rule-card-actions .save-btn:hover {
   background: #38a169;
 }
 
-.cancel-btn {
+.rule-card-actions .cancel-btn {
   flex: 1;
-  padding: 12px;
+  padding: 6px;
   background: white;
   border: 1px solid #e2e8f0;
-  border-radius: 6px;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
 }
 
-.cancel-btn:hover {
+.rule-card-actions .cancel-btn:hover {
   background: #f7fafc;
 }
 
-@media (max-width: 1024px) {
-  .admin-content {
-    grid-template-columns: 1fr;
+@media (max-width: 768px) {
+  .rule-card-main {
+    flex-direction: column;
   }
 
-  .rule-editor {
-    position: static;
+  .rule-move-buttons {
+    flex-direction: row;
+  }
+
+  .rule-card-header {
+    flex-wrap: wrap;
   }
 }

@@ -323,20 +323,19 @@ function DiagnosisResult({ result }) {
 function AdminPage() {
   const [rules, setRules] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedRule, setSelectedRule] = useState(null);
-  const [editMode, setEditMode] = useState(false);
   const [filterVisaType, setFilterVisaType] = useState('');
   const [message, setMessage] = useState(null);
+  const [showNewRuleForm, setShowNewRuleForm] = useState(false);
 
   const fetchRules = async () => {
     setLoading(true);
     try {
-      const url = filterVisaType
-        ? `${API_BASE}/api/rules?visa_type=${filterVisaType}`
-        : `${API_BASE}/api/rules`;
+      let url = `${API_BASE}/api/rules?sort=none`;
+      if (filterVisaType) {
+        url += `&visa_type=${filterVisaType}`;
+      }
       const response = await fetch(url);
       const data = await response.json();
-      console.log('[ADMIN] fetchRules', data);
       setRules(data.rules || []);
     } catch (error) {
       console.error('Error fetching rules:', error);
@@ -349,10 +348,10 @@ function AdminPage() {
     fetchRules();
   }, [filterVisaType]);
 
-  const handleSaveRule = async (ruleData) => {
+  const handleSaveRule = async (ruleData, isNew = false) => {
     try {
-      const method = editMode ? 'PUT' : 'POST';
-      const url = editMode ? `${API_BASE}/api/rules/${ruleData.id}` : `${API_BASE}/api/rules`;
+      const method = isNew ? 'POST' : 'PUT';
+      const url = isNew ? `${API_BASE}/api/rules` : `${API_BASE}/api/rules/${ruleData.id}`;
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
@@ -360,9 +359,8 @@ function AdminPage() {
       });
 
       if (response.ok) {
-        setMessage({ type: 'success', text: editMode ? 'ルールを更新しました' : 'ルールを作成しました' });
-        setSelectedRule(null);
-        setEditMode(false);
+        setMessage({ type: 'success', text: isNew ? 'ルールを作成しました' : '保存しました' });
+        setShowNewRuleForm(false);
         fetchRules();
       } else {
         const error = await response.json();
@@ -375,7 +373,7 @@ function AdminPage() {
   };
 
   const handleDeleteRule = async (ruleId) => {
-    if (!window.confirm(`ルール ${ruleId} を削除しますか？`)) return;
+    if (!window.confirm(`このルールを削除しますか？`)) return;
 
     try {
       const response = await fetch(`${API_BASE}/api/rules/${ruleId}`, { method: 'DELETE' });
@@ -405,6 +403,46 @@ function AdminPage() {
     }
   };
 
+  const handleAutoOrganize = async () => {
+    if (!window.confirm('ルールを依存関係に基づいて自動整理しますか？\n\n整理ロジック:\n・ビザタイプ順（E→L→H-1B→B→J-1）\n・各ビザ内で依存深度順（ゴール→中間→初期）')) return;
+
+    try {
+      const response = await fetch(`${API_BASE}/api/rules/auto-organize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (response.ok) {
+        setMessage({ type: 'success', text: 'ルールを整理しました' });
+        fetchRules();
+      } else {
+        setMessage({ type: 'error', text: '整理に失敗しました' });
+      }
+    } catch (error) {
+      console.error('Error organizing rules:', error);
+      setMessage({ type: 'error', text: '整理に失敗しました' });
+    }
+  };
+
+  const moveRule = async (index, direction) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= rules.length) return;
+
+    const newRules = [...rules];
+    [newRules[index], newRules[newIndex]] = [newRules[newIndex], newRules[index]];
+    setRules(newRules);
+
+    try {
+      await fetch(`${API_BASE}/api/rules/reorder`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rule_ids: newRules.map(r => r.id) })
+      });
+    } catch (error) {
+      console.error('Error saving order:', error);
+      setMessage({ type: 'error', text: '順序の保存に失敗しました' });
+    }
+  };
+
   return (
     <div className="admin-page">
       <div className="admin-header">
@@ -414,12 +452,15 @@ function AdminPage() {
             <option value="">全てのビザタイプ</option>
             <option value="E">Eビザ</option>
             <option value="L">Lビザ</option>
-            <option value="B">Bビザ</option>
             <option value="H-1B">H-1Bビザ</option>
+            <option value="B">Bビザ</option>
             <option value="J-1">J-1ビザ</option>
           </select>
-          <button className="admin-button" onClick={() => { setSelectedRule({}); setEditMode(false); }}>
+          <button className="admin-button" onClick={() => setShowNewRuleForm(true)}>
             新規ルール
+          </button>
+          <button className="admin-button secondary" onClick={handleAutoOrganize}>
+            自動整理
           </button>
           <button className="admin-button secondary" onClick={handleValidate}>
             整合性チェック
@@ -434,187 +475,204 @@ function AdminPage() {
         </div>
       )}
 
-      <div className={`admin-content ${selectedRule ? 'with-editor' : ''}`}>
-        <div className="rules-list">
-          {loading ? (
-            <p>読み込み中...</p>
-          ) : (
-            <table className="rules-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>名前</th>
-                  <th>ビザ</th>
-                  <th>条件数</th>
-                  <th>タイプ</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rules.map(rule => (
-                  <tr key={rule.id} className={selectedRule?.id === rule.id ? 'selected' : ''}>
-                    <td>{rule.id}</td>
-                    <td>{rule.name}</td>
-                    <td><span className={`visa-badge visa-${rule.visa_type.replace('-', '')}`}>{rule.visa_type}</span></td>
-                    <td>{rule.conditions.length}</td>
-                    <td>{rule.is_or_rule ? 'OR' : 'AND'}</td>
-                    <td>
-                      <button className="table-button" onClick={() => { setSelectedRule(rule); setEditMode(true); }}>編集</button>
-                      <button className="table-button danger" onClick={() => handleDeleteRule(rule.id)}>削除</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+      {showNewRuleForm && (
+        <AdminRuleCard
+          rule={{ id: '', name: '', conditions: [''], action: '', is_or_rule: false, visa_type: 'E', rule_type: 'i' }}
+          index={-1}
+          isNew={true}
+          allRules={rules}
+          onSave={(data) => handleSaveRule(data, true)}
+          onCancel={() => setShowNewRuleForm(false)}
+          onDelete={() => {}}
+        />
+      )}
 
-        {selectedRule && (
-          <RuleEditor
-            rule={selectedRule}
-            isEdit={editMode}
-            onSave={handleSaveRule}
-            onCancel={() => { setSelectedRule(null); setEditMode(false); }}
-          />
+      <div className="admin-rules-cards">
+        {loading ? (
+          <p className="loading-text">読み込み中...</p>
+        ) : (
+          rules.map((rule, index) => (
+            <AdminRuleCard
+              key={rule.id}
+              rule={rule}
+              index={index}
+              isNew={false}
+              totalRules={rules.length}
+              onSave={(data) => handleSaveRule(data, false)}
+              onDelete={() => handleDeleteRule(rule.id)}
+              onMoveUp={() => moveRule(index, -1)}
+              onMoveDown={() => moveRule(index, 1)}
+            />
+          ))
         )}
       </div>
     </div>
   );
 }
 
-// ルール編集フォーム
-function RuleEditor({ rule, isEdit, onSave, onCancel }) {
+// 管理画面用ルールカード（常時編集可能・コンパクト）
+function AdminRuleCard({ rule, index, isNew, totalRules, allRules, onSave, onCancel, onDelete, onMoveUp, onMoveDown }) {
+  // 次の利用可能なIDを生成
+  const generateNextId = (visaType, rules) => {
+    if (!rules) return '';
+    const prefix = visaType.replace('-', '');
+    const existingIds = rules
+      .filter(r => r.visa_type === visaType)
+      .map(r => {
+        const match = r.id.match(new RegExp(`^${prefix}(\\d+)$`));
+        return match ? parseInt(match[1], 10) : 0;
+      })
+      .filter(n => n > 0);
+    const maxNum = existingIds.length > 0 ? Math.max(...existingIds) : 0;
+    return `${prefix}${String(maxNum + 1).padStart(3, '0')}`;
+  };
+
+  const initialVisaType = rule.visa_type || 'E';
   const [formData, setFormData] = useState({
-    id: rule.id || '',
+    id: isNew ? generateNextId(initialVisaType, allRules) : (rule.id || ''),
     name: rule.name || '',
-    conditions: rule.conditions || [''],
+    conditions: rule.conditions?.length ? rule.conditions : [''],
     action: rule.action || '',
     is_or_rule: rule.is_or_rule || false,
-    visa_type: rule.visa_type || 'E',
+    visa_type: initialVisaType,
     rule_type: rule.rule_type || 'i'
   });
+  const [hasChanges, setHasChanges] = useState(isNew);
 
-  const handleConditionChange = (index, value) => {
-    const newConditions = [...formData.conditions];
-    newConditions[index] = value;
-    setFormData({ ...formData, conditions: newConditions });
+  const updateField = (field, value) => {
+    // ビザタイプ変更時はIDも自動更新（新規作成時のみ）
+    if (field === 'visa_type' && isNew) {
+      const newId = generateNextId(value, allRules);
+      setFormData({ ...formData, [field]: value, id: newId });
+    } else {
+      setFormData({ ...formData, [field]: value });
+    }
+    setHasChanges(true);
+  };
+
+  const handleConditionChange = (idx, value) => {
+    const newConds = [...formData.conditions];
+    newConds[idx] = value;
+    setFormData({ ...formData, conditions: newConds });
+    setHasChanges(true);
   };
 
   const addCondition = () => {
     setFormData({ ...formData, conditions: [...formData.conditions, ''] });
+    setHasChanges(true);
   };
 
-  const removeCondition = (index) => {
-    const newConditions = formData.conditions.filter((_, i) => i !== index);
-    setFormData({ ...formData, conditions: newConditions });
+  const removeCondition = (idx) => {
+    if (formData.conditions.length > 1) {
+      setFormData({ ...formData, conditions: formData.conditions.filter((_, i) => i !== idx) });
+      setHasChanges(true);
+    }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const moveCondition = (idx, direction) => {
+    const newIdx = idx + direction;
+    if (newIdx < 0 || newIdx >= formData.conditions.length) return;
+    const newConds = [...formData.conditions];
+    [newConds[idx], newConds[newIdx]] = [newConds[newIdx], newConds[idx]];
+    setFormData({ ...formData, conditions: newConds });
+    setHasChanges(true);
+  };
+
+  const handleSave = () => {
     const cleanedConditions = formData.conditions.filter(c => c.trim() !== '');
+    if (!formData.id || !formData.name || cleanedConditions.length === 0 || !formData.action) {
+      alert('ID、名前、条件、結論は必須です');
+      return;
+    }
     onSave({ ...formData, conditions: cleanedConditions });
+    setHasChanges(false);
+  };
+
+  const handleCancel = () => {
+    setFormData({
+      id: rule.id || '',
+      name: rule.name || '',
+      conditions: rule.conditions?.length ? rule.conditions : [''],
+      action: rule.action || '',
+      is_or_rule: rule.is_or_rule || false,
+      visa_type: rule.visa_type || 'E',
+      rule_type: rule.rule_type || 'i'
+    });
+    setHasChanges(false);
+    if (isNew) onCancel();
   };
 
   return (
-    <div className="rule-editor">
-      <h3>{isEdit ? 'ルール編集' : '新規ルール作成'}</h3>
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label>ID</label>
-          <input
-            type="text"
-            value={formData.id}
-            onChange={(e) => setFormData({ ...formData, id: e.target.value })}
-            disabled={isEdit}
-            required
-            placeholder="例: E012"
-          />
-        </div>
+    <div className={`admin-rule-card ${hasChanges ? 'has-changes' : ''}`}>
+      <div className="rule-card-main">
+        {/* 左側: 移動ボタン */}
+        {!isNew && (
+          <div className="rule-move-buttons">
+            <button className="rule-move-btn" onClick={onMoveUp} disabled={index === 0}>↑</button>
+            <button className="rule-move-btn" onClick={onMoveDown} disabled={index === totalRules - 1}>↓</button>
+          </div>
+        )}
 
-        <div className="form-group">
-          <label>ルール名</label>
-          <input
-            type="text"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            required
-            placeholder="例: 新規条件"
-          />
-        </div>
+        {/* 中央: ルール内容 */}
+        <div className="rule-card-content">
+          {/* ヘッダー行 */}
+          <div className="rule-card-header">
+            <span className="rule-number">#{isNew ? 'NEW' : index + 1}</span>
+            <input type="text" className="rule-id-input" value={formData.id} onChange={(e) => updateField('id', e.target.value)} placeholder="ID" disabled={!isNew} />
+            <select className="rule-visa-select" value={formData.visa_type} onChange={(e) => updateField('visa_type', e.target.value)}>
+              <option value="E">E</option>
+              <option value="L">L</option>
+              <option value="H-1B">H-1B</option>
+              <option value="B">B</option>
+              <option value="J-1">J-1</option>
+            </select>
+            <select className="rule-type-select" value={formData.is_or_rule ? 'or' : 'and'} onChange={(e) => updateField('is_or_rule', e.target.value === 'or')}>
+              <option value="and">AND</option>
+              <option value="or">OR</option>
+            </select>
+            <input type="text" className="rule-name-input" value={formData.name} onChange={(e) => updateField('name', e.target.value)} placeholder="ルール名" />
+          </div>
 
-        <div className="form-group">
-          <label>ビザタイプ</label>
-          <select value={formData.visa_type} onChange={(e) => setFormData({ ...formData, visa_type: e.target.value })}>
-            <option value="E">Eビザ</option>
-            <option value="L">Lビザ</option>
-            <option value="B">Bビザ</option>
-            <option value="H-1B">H-1Bビザ</option>
-            <option value="J-1">J-1ビザ</option>
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label>条件タイプ</label>
-          <div className="radio-group">
-            <label>
-              <input
-                type="radio"
-                checked={!formData.is_or_rule}
-                onChange={() => setFormData({ ...formData, is_or_rule: false })}
-              /> AND（全て満たす）
-            </label>
-            <label>
-              <input
-                type="radio"
-                checked={formData.is_or_rule}
-                onChange={() => setFormData({ ...formData, is_or_rule: true })}
-              /> OR（いずれか満たす）
-            </label>
+          {/* THEN/IF 行 */}
+          <div className="rule-card-body">
+            <div className="rule-card-conclusion">
+              <span className="label">THEN:</span>
+              <input type="text" value={formData.action} onChange={(e) => updateField('action', e.target.value)} placeholder="結論" />
+            </div>
+            <div className="rule-card-conditions">
+              <span className="label">IF:</span>
+              <div className="conditions-edit-list">
+                {formData.conditions.map((cond, idx) => (
+                  <div key={idx} className="condition-edit-row">
+                    <input type="text" value={cond} onChange={(e) => handleConditionChange(idx, e.target.value)} placeholder="条件" />
+                    {formData.conditions.length > 1 && (
+                      <>
+                        <button type="button" className="cond-move-btn" onClick={() => moveCondition(idx, -1)} disabled={idx === 0}>↑</button>
+                        <button type="button" className="cond-move-btn" onClick={() => moveCondition(idx, 1)} disabled={idx === formData.conditions.length - 1}>↓</button>
+                        <button type="button" className="cond-remove-btn" onClick={() => removeCondition(idx)}>×</button>
+                      </>
+                    )}
+                  </div>
+                ))}
+                <button type="button" className="cond-add-btn" onClick={addCondition}>+ 条件追加</button>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="form-group">
-          <label>ルールタイプ</label>
-          <select value={formData.rule_type} onChange={(e) => setFormData({ ...formData, rule_type: e.target.value })}>
-            <option value="i">開始ルール（直接質問）</option>
-            <option value="m">中間ルール（導出条件）</option>
-          </select>
+        {/* 右側: アクションボタン */}
+        <div className="rule-action-buttons">
+          <button className="delete-btn" onClick={isNew ? onCancel : onDelete}>{isNew ? '取消' : '削除'}</button>
         </div>
+      </div>
 
-        <div className="form-group">
-          <label>条件 (IF)</label>
-          {formData.conditions.map((cond, index) => (
-            <div key={index} className="condition-input">
-              <input
-                type="text"
-                value={cond}
-                onChange={(e) => handleConditionChange(index, e.target.value)}
-                placeholder="条件を入力"
-              />
-              {formData.conditions.length > 1 && (
-                <button type="button" className="remove-btn" onClick={() => removeCondition(index)}>-</button>
-              )}
-            </div>
-          ))}
-          <button type="button" className="add-btn" onClick={addCondition}>+ 条件追加</button>
+      {/* 変更時の保存/キャンセル */}
+      {hasChanges && (
+        <div className="rule-card-actions">
+          <button className="save-btn" onClick={handleSave}>保存</button>
+          <button className="cancel-btn" onClick={handleCancel}>元に戻す</button>
         </div>
-
-        <div className="form-group">
-          <label>結論 (THEN)</label>
-          <input
-            type="text"
-            value={formData.action}
-            onChange={(e) => setFormData({ ...formData, action: e.target.value })}
-            required
-            placeholder="結論を入力"
-          />
-        </div>
-
-        <div className="form-actions">
-          <button type="submit" className="save-btn">保存</button>
-          <button type="button" className="cancel-btn" onClick={onCancel}>キャンセル</button>
-        </div>
-      </form>
+      )}
     </div>
   );
 }
