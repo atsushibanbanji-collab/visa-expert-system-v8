@@ -520,9 +520,15 @@ def get_derived_conditions() -> set:
 
 
 def reload_rules():
-    """ルールを再読み込み（編集後に呼び出す）"""
+    """ルールを再読み込み（編集後に呼び出す）
+
+    注意: リストをin-place更新することで、
+    main.pyなど他モジュールからimportされた参照も最新データを指すようになる
+    """
     global VISA_RULES
-    VISA_RULES = _load_rules_from_json()
+    new_rules = _load_rules_from_json()
+    VISA_RULES.clear()
+    VISA_RULES.extend(new_rules)
     return VISA_RULES
 
 

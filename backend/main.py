@@ -167,6 +167,7 @@ async def get_rules(visa_type: Optional[str] = None, sort: Optional[str] = "visa
 
     sort: "visa_type" (E→L→H-1B→B→J-1順), "none" (JSON保存順)
     """
+    reload_rules()  # 最新のルールを取得
     rules = get_all_rules()
 
     if visa_type:

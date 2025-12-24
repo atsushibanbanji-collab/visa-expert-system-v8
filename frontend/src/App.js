@@ -512,19 +512,25 @@ function AdminPage() {
 
 // 管理画面用ルールカード（常時編集可能・コンパクト）
 function AdminRuleCard({ rule, index, isNew, totalRules, allRules, onSave, onCancel, onDelete, onMoveUp, onMoveDown }) {
-  // 次の利用可能なIDを生成
+  // 次の利用可能なIDを生成（一番若い空き番号を探す）
   const generateNextId = (visaType, rules) => {
     if (!rules) return '';
     const prefix = visaType.replace('-', '');
-    const existingIds = rules
-      .filter(r => r.visa_type === visaType)
-      .map(r => {
-        const match = r.id.match(new RegExp(`^${prefix}(\\d+)$`));
-        return match ? parseInt(match[1], 10) : 0;
-      })
-      .filter(n => n > 0);
-    const maxNum = existingIds.length > 0 ? Math.max(...existingIds) : 0;
-    return `${prefix}${String(maxNum + 1).padStart(3, '0')}`;
+    const existingIds = new Set(
+      rules
+        .filter(r => r.visa_type === visaType)
+        .map(r => {
+          const match = r.id.match(new RegExp(`^${prefix}(\\d+)$`));
+          return match ? parseInt(match[1], 10) : 0;
+        })
+        .filter(n => n > 0)
+    );
+    // 1から順に空き番号を探す
+    let nextNum = 1;
+    while (existingIds.has(nextNum)) {
+      nextNum++;
+    }
+    return `${prefix}${String(nextNum).padStart(3, '0')}`;
   };
 
   const initialVisaType = rule.visa_type || 'E';
@@ -618,7 +624,7 @@ function AdminRuleCard({ rule, index, isNew, totalRules, allRules, onSave, onCan
           {/* ヘッダー行 */}
           <div className="rule-card-header">
             <span className="rule-number">#{isNew ? 'NEW' : index + 1}</span>
-            <input type="text" className="rule-id-input" value={formData.id} onChange={(e) => updateField('id', e.target.value)} placeholder="ID" disabled={!isNew} />
+            <input type="text" className="rule-id-input" value={formData.id} onChange={(e) => updateField('id', e.target.value)} placeholder="ID" />
             <select className="rule-visa-select" value={formData.visa_type} onChange={(e) => updateField('visa_type', e.target.value)}>
               <option value="E">E</option>
               <option value="L">L</option>
