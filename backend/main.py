@@ -1,14 +1,89 @@
 """
 ビザ選定エキスパートシステム - FastAPI メインアプリケーション
 """
+import re
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, List, Optional, Any
-import json
 
 from inference_engine import InferenceEngine
-from knowledge_base import get_all_rules, get_goal_rules, VISA_RULES, save_rules, reload_rules, RuleType, VISA_TYPE_ORDER
+from knowledge_base import (
+    get_all_rules, get_goal_rules, VISA_RULES, save_rules, reload_rules,
+    RuleType, VISA_TYPE_ORDER, _load_goal_actions_from_json
+)
+
+
+# ========== ヘルパー関数 ==========
+
+def _rule_to_dict(rule) -> dict:
+    """ルールオブジェクトをdict形式に変換"""
+    return {
+        "id": rule.id,
+        "name": rule.name,
+        "conditions": rule.conditions,
+        "action": rule.action,
+        "is_or_rule": rule.is_or_rule,
+        "visa_type": rule.visa_type,
+        "rule_type": rule.rule_type.value
+    }
+
+
+def _rules_to_dict_list(rules: list) -> list:
+    """ルールリストをdictリストに変換"""
+    return [_rule_to_dict(r) for r in rules]
+
+
+def _build_rules_data(rules: list, goal_actions: set = None) -> dict:
+    """ルールリストをJSON保存用のdict形式に変換"""
+    if goal_actions is None:
+        goal_actions = _load_goal_actions_from_json()
+    return {
+        "rules": _rules_to_dict_list(rules),
+        "goal_actions": list(goal_actions)
+    }
+
+
+def _find_rule(rule_id: str):
+    """ルールIDでルールを検索"""
+    return next((r for r in VISA_RULES if r.id == rule_id), None)
+
+
+def _save_rules_excluding(exclude_id: str = None) -> list:
+    """指定IDを除外したルールリストを返す"""
+    if exclude_id:
+        return [r for r in VISA_RULES if r.id != exclude_id]
+    return list(VISA_RULES)
+
+
+def _sort_rules_by_id(rules: list) -> list:
+    """ID番号順でソート（ビザタイプ順 → ID番号順）"""
+    def extract_id_number(rule_id: str) -> int:
+        match = re.search(r'\d+', rule_id)
+        return int(match.group()) if match else 999
+    return sorted(rules, key=lambda r: (VISA_TYPE_ORDER.get(r.visa_type, 99), extract_id_number(r.id)))
+
+
+def _sort_rules_by_dependency(rules: list, goal_actions: set) -> list:
+    """依存関係順でソート（ビザタイプ順 → 深度順）"""
+    depth_cache = {}
+
+    def get_depth(rule) -> int:
+        if rule.id in depth_cache:
+            return depth_cache[rule.id]
+        if rule.action in goal_actions:
+            depth_cache[rule.id] = 0
+            return 0
+        max_parent_depth = -1
+        for other in rules:
+            if rule.action in other.conditions:
+                max_parent_depth = max(max_parent_depth, get_depth(other))
+        depth_cache[rule.id] = 999 if max_parent_depth == -1 else max_parent_depth + 1
+        return depth_cache[rule.id]
+
+    for rule in rules:
+        get_depth(rule)
+    return sorted(rules, key=lambda r: (VISA_TYPE_ORDER.get(r.visa_type, 99), depth_cache.get(r.id, 999)))
 
 app = FastAPI(
     title="ビザ選定エキスパートシステム",
@@ -167,49 +242,25 @@ async def get_rules(visa_type: Optional[str] = None, sort: Optional[str] = "visa
 
     sort: "visa_type" (E→L→H-1B→B→J-1順), "none" (JSON保存順)
     """
-    reload_rules()  # 最新のルールを取得
+    reload_rules()
     rules = get_all_rules()
 
     if visa_type:
         rules = [r for r in rules if r.visa_type == visa_type]
-
-    # ソート（sort=noneの場合はJSON保存順のまま）
     if sort == "visa_type":
         rules = sorted(rules, key=lambda r: VISA_TYPE_ORDER.get(r.visa_type, 99))
 
-    return {
-        "rules": [
-            {
-                "id": r.id,
-                "name": r.name,
-                "conditions": r.conditions,
-                "action": r.action,
-                "is_or_rule": r.is_or_rule,
-                "visa_type": r.visa_type,
-                "rule_type": r.rule_type.value
-            }
-            for r in rules
-        ]
-    }
+    return {"rules": _rules_to_dict_list(rules)}
 
 
 @app.get("/api/rules/{rule_id}")
 async def get_rule(rule_id: str):
     """特定のルールを取得"""
-    reload_rules()  # 最新のルールを取得
-    for rule in VISA_RULES:
-        if rule.id == rule_id:
-            return {
-                "id": rule.id,
-                "name": rule.name,
-                "conditions": rule.conditions,
-                "action": rule.action,
-                "is_or_rule": rule.is_or_rule,
-                "visa_type": rule.visa_type,
-                "rule_type": rule.rule_type.value
-            }
-
-    raise HTTPException(status_code=404, detail="Rule not found")
+    reload_rules()
+    rule = _find_rule(rule_id)
+    if not rule:
+        raise HTTPException(status_code=404, detail="Rule not found")
+    return _rule_to_dict(rule)
 
 
 @app.get("/api/visa-types")
@@ -229,29 +280,24 @@ async def get_visa_types():
 @app.get("/api/validation/check")
 async def validate_rules(visa_type: Optional[str] = None):
     """ルールの整合性チェック"""
-    reload_rules()  # 最新のルールを取得
+    reload_rules()
     rules = get_all_rules()
     if visa_type:
         rules = [r for r in rules if r.visa_type == visa_type]
 
     issues = []
     all_actions = {r.action for r in VISA_RULES}
-    all_conditions = set()
-    for r in VISA_RULES:
-        all_conditions.update(r.conditions)
+    goal_actions = _load_goal_actions_from_json()
 
     # 到達不能なルールをチェック
     for rule in rules:
         for cond in rule.conditions:
-            if cond in all_actions:
-                # この条件は他のルールの結論
-                producing_rules = [r for r in VISA_RULES if r.action == cond]
-                if not producing_rules:
-                    issues.append({
-                        "type": "unreachable",
-                        "rule_id": rule.id,
-                        "message": f"条件「{cond}」を導出するルールがありません"
-                    })
+            if cond in all_actions and not any(r.action == cond for r in VISA_RULES):
+                issues.append({
+                    "type": "unreachable",
+                    "rule_id": rule.id,
+                    "message": f"条件「{cond}」を導出するルールがありません"
+                })
 
     # 循環参照をチェック
     def check_cycle(rule_id: str, visited: set, path: list):
@@ -259,13 +305,11 @@ async def validate_rules(visa_type: Optional[str] = None):
             return path + [rule_id]
         visited.add(rule_id)
         path.append(rule_id)
-
-        rule = next((r for r in VISA_RULES if r.id == rule_id), None)
+        rule = _find_rule(rule_id)
         if rule:
             for cond in rule.conditions:
                 if cond in all_actions:
-                    dep_rules = [r for r in VISA_RULES if r.action == cond]
-                    for dep_rule in dep_rules:
+                    for dep_rule in (r for r in VISA_RULES if r.action == cond):
                         cycle = check_cycle(dep_rule.id, visited.copy(), path.copy())
                         if cycle:
                             return cycle
@@ -281,71 +325,25 @@ async def validate_rules(visa_type: Optional[str] = None):
             })
 
     # 孤立ルールをチェック（THENが他で使われていない + ゴールでもない）
-    from knowledge_base import _load_goal_actions_from_json
-    goal_actions = _load_goal_actions_from_json()
-
     for rule in rules:
-        action = rule.action
-        # ゴールアクションならスキップ
-        if action in goal_actions:
-            continue
-        # 他のルールの条件として使われているかチェック
-        is_used = any(action in r.conditions for r in VISA_RULES if r.id != rule.id)
-        if not is_used:
-            issues.append({
-                "type": "orphan",
-                "rule_id": rule.id,
-                "message": f"ルール「{rule.name}」のTHEN「{action}」はどこからも参照されていません"
-            })
+        if rule.action not in goal_actions:
+            if not any(rule.action in r.conditions for r in VISA_RULES if r.id != rule.id):
+                issues.append({
+                    "type": "orphan",
+                    "rule_id": rule.id,
+                    "message": f"ルール「{rule.name}」のTHEN「{rule.action}」はどこからも参照されていません"
+                })
 
-    if not issues:
-        return {"status": "ok", "message": "問題ありません"}
-
-    return {"status": "issues_found", "issues": issues}
+    return {"status": "ok", "message": "問題ありません"} if not issues else {"status": "issues_found", "issues": issues}
 
 
 
 
 # ========== ルール管理 CRUD ==========
 
-@app.post("/api/rules")
-async def create_rule(rule: RuleRequest):
-    """新しいルールを作成"""
-    reload_rules()  # 最新のルールを取得
-    # 既存ルールと重複チェック
-    for r in VISA_RULES:
-        if r.id == rule.id:
-            raise HTTPException(status_code=400, detail=f"Rule with ID {rule.id} already exists")
-
-    # 現在のルールをJSONとして取得
-    rules_data = {
-        "rules": [
-            {
-                "id": r.id,
-                "name": r.name,
-                "conditions": r.conditions,
-                "action": r.action,
-                "is_or_rule": r.is_or_rule,
-                "visa_type": r.visa_type,
-                "rule_type": r.rule_type.value
-            }
-            for r in VISA_RULES
-        ],
-        "goal_actions": [
-            "Eビザでの申請ができます",
-            "Blanket Lビザでの申請ができます",
-            "Lビザ（Individual）での申請ができます",
-            "Bビザの申請ができます",
-            "契約書に基づくBビザの申請ができます",
-            "B-1 in lieu of H-1Bビザの申請ができます",
-            "B-1 in lieu of H3ビザの申請ができます",
-            "H-1Bビザでの申請ができます",
-            "J-1ビザの申請ができます",
-        ]
-    }
-
-    # 新しいルールを追加
-    rules_data["rules"].append({
+def _request_to_dict(rule: 'RuleRequest') -> dict:
+    """RuleRequestをdict形式に変換"""
+    return {
         "id": rule.id,
         "name": rule.name,
         "conditions": rule.conditions,
@@ -353,115 +351,49 @@ async def create_rule(rule: RuleRequest):
         "is_or_rule": rule.is_or_rule,
         "visa_type": rule.visa_type,
         "rule_type": rule.rule_type
-    })
+    }
 
-    if save_rules(rules_data):
-        return {"status": "created", "rule_id": rule.id}
-    else:
+
+@app.post("/api/rules")
+async def create_rule(rule: RuleRequest):
+    """新しいルールを作成"""
+    reload_rules()
+    if _find_rule(rule.id):
+        raise HTTPException(status_code=400, detail=f"Rule with ID {rule.id} already exists")
+
+    rules_data = _build_rules_data(VISA_RULES)
+    rules_data["rules"].append(_request_to_dict(rule))
+
+    if not save_rules(rules_data):
         raise HTTPException(status_code=500, detail="Failed to save rule")
+    return {"status": "created", "rule_id": rule.id}
 
 
 @app.put("/api/rules/{rule_id}")
 async def update_rule(rule_id: str, rule: RuleRequest):
     """既存ルールを更新"""
-    reload_rules()  # 最新のルールを取得
-    found = False
-    for r in VISA_RULES:
-        if r.id == rule_id:
-            found = True
-            break
-
-    if not found:
+    reload_rules()
+    if not _find_rule(rule_id):
         raise HTTPException(status_code=404, detail="Rule not found")
 
-    # 現在のルールをJSONとして取得（更新対象を除外）
-    rules_data = {
-        "rules": [
-            {
-                "id": r.id,
-                "name": r.name,
-                "conditions": r.conditions,
-                "action": r.action,
-                "is_or_rule": r.is_or_rule,
-                "visa_type": r.visa_type,
-                "rule_type": r.rule_type.value
-            }
-            for r in VISA_RULES if r.id != rule_id
-        ],
-        "goal_actions": [
-            "Eビザでの申請ができます",
-            "Blanket Lビザでの申請ができます",
-            "Lビザ（Individual）での申請ができます",
-            "Bビザの申請ができます",
-            "契約書に基づくBビザの申請ができます",
-            "B-1 in lieu of H-1Bビザの申請ができます",
-            "B-1 in lieu of H3ビザの申請ができます",
-            "H-1Bビザでの申請ができます",
-            "J-1ビザの申請ができます",
-        ]
-    }
+    rules_data = _build_rules_data(_save_rules_excluding(rule_id))
+    rules_data["rules"].append(_request_to_dict(rule))
 
-    # 更新されたルールを追加
-    rules_data["rules"].append({
-        "id": rule.id,
-        "name": rule.name,
-        "conditions": rule.conditions,
-        "action": rule.action,
-        "is_or_rule": rule.is_or_rule,
-        "visa_type": rule.visa_type,
-        "rule_type": rule.rule_type
-    })
-
-    if save_rules(rules_data):
-        return {"status": "updated", "rule_id": rule.id}
-    else:
+    if not save_rules(rules_data):
         raise HTTPException(status_code=500, detail="Failed to save rule")
+    return {"status": "updated", "rule_id": rule.id}
 
 
 @app.delete("/api/rules/{rule_id}")
 async def delete_rule(rule_id: str):
     """ルールを削除"""
-    reload_rules()  # 最新のルールを取得
-    found = False
-    for r in VISA_RULES:
-        if r.id == rule_id:
-            found = True
-            break
-
-    if not found:
+    reload_rules()
+    if not _find_rule(rule_id):
         raise HTTPException(status_code=404, detail="Rule not found")
 
-    # 現在のルールをJSONとして取得（削除対象を除外）
-    rules_data = {
-        "rules": [
-            {
-                "id": r.id,
-                "name": r.name,
-                "conditions": r.conditions,
-                "action": r.action,
-                "is_or_rule": r.is_or_rule,
-                "visa_type": r.visa_type,
-                "rule_type": r.rule_type.value
-            }
-            for r in VISA_RULES if r.id != rule_id
-        ],
-        "goal_actions": [
-            "Eビザでの申請ができます",
-            "Blanket Lビザでの申請ができます",
-            "Lビザ（Individual）での申請ができます",
-            "Bビザの申請ができます",
-            "契約書に基づくBビザの申請ができます",
-            "B-1 in lieu of H-1Bビザの申請ができます",
-            "B-1 in lieu of H3ビザの申請ができます",
-            "H-1Bビザでの申請ができます",
-            "J-1ビザの申請ができます",
-        ]
-    }
-
-    if save_rules(rules_data):
-        return {"status": "deleted", "rule_id": rule_id}
-    else:
+    if not save_rules(_build_rules_data(_save_rules_excluding(rule_id))):
         raise HTTPException(status_code=500, detail="Failed to delete rule")
+    return {"status": "deleted", "rule_id": rule_id}
 
 
 class ReorderRequest(BaseModel):
@@ -471,127 +403,43 @@ class ReorderRequest(BaseModel):
 @app.post("/api/rules/reorder")
 async def reorder_rules(request: ReorderRequest):
     """ルールの順序を変更"""
-    reload_rules()  # 最新のルールを取得
-    # 現在のルールをIDでマップ化
+    reload_rules()
     rules_map = {r.id: r for r in VISA_RULES}
 
-    # 指定された順序で並び替え
     reordered = []
     for rule_id in request.rule_ids:
         if rule_id in rules_map:
-            reordered.append(rules_map[rule_id])
-            del rules_map[rule_id]
-
-    # 指定されなかったルールは末尾に追加
+            reordered.append(rules_map.pop(rule_id))
     reordered.extend(rules_map.values())
 
-    # JSONに保存
-    rules_data = {
-        "rules": [
-            {
-                "id": r.id,
-                "name": r.name,
-                "conditions": r.conditions,
-                "action": r.action,
-                "is_or_rule": r.is_or_rule,
-                "visa_type": r.visa_type,
-                "rule_type": r.rule_type.value
-            }
-            for r in reordered
-        ],
-        "goal_actions": [
-            "Eビザでの申請ができます",
-            "Blanket Lビザでの申請ができます",
-            "Lビザ（Individual）での申請ができます",
-            "Bビザの申請ができます",
-            "契約書に基づくBビザの申請ができます",
-            "B-1 in lieu of H-1Bビザの申請ができます",
-            "B-1 in lieu of H3ビザの申請ができます",
-            "H-1Bビザでの申請ができます",
-            "J-1ビザの申請ができます",
-        ]
-    }
-
-    if save_rules(rules_data):
-        return {"status": "reordered", "count": len(reordered)}
-    else:
+    if not save_rules(_build_rules_data(reordered)):
         raise HTTPException(status_code=500, detail="Failed to save rule order")
+    return {"status": "reordered", "count": len(reordered)}
+
+
+class AutoOrganizeRequest(BaseModel):
+    mode: str = "dependency"  # "dependency" or "id"
 
 
 @app.post("/api/rules/auto-organize")
-async def auto_organize_rules():
-    """ルールを依存関係に基づいて自動整理
+async def auto_organize_rules(request: AutoOrganizeRequest = AutoOrganizeRequest()):
+    """ルールを自動整理
 
-    整理ロジック:
-    1. ビザタイプ順（E→L→H-1B→B→J-1）
-    2. 各ビザタイプ内で依存深度順（ゴールルール→中間ルール→初期ルール）
+    mode:
+    - "dependency": 依存関係に基づいて整理（ビザタイプ順→深度順）
+    - "id": IDのナンバリング順に整理（ビザタイプ順→ID番号順）
     """
-    from knowledge_base import _load_goal_actions_from_json
-
-    reload_rules()  # 最新のルールを取得
+    reload_rules()
     goal_actions = _load_goal_actions_from_json()
 
-    # 全ルールのactionをマップ
-    action_to_rule = {r.action: r for r in VISA_RULES}
-
-    # 依存深度を計算（ゴール=0、ゴールの条件=1、...）
-    depth_cache = {}
-
-    def get_depth(rule) -> int:
-        if rule.id in depth_cache:
-            return depth_cache[rule.id]
-
-        # ゴールルールは深度0
-        if rule.action in goal_actions:
-            depth_cache[rule.id] = 0
-            return 0
-
-        # このルールのactionを条件として持つルールを探す
-        max_parent_depth = -1
-        for other in VISA_RULES:
-            if rule.action in other.conditions:
-                parent_depth = get_depth(other)
-                max_parent_depth = max(max_parent_depth, parent_depth)
-
-        # 親がいない場合は最大深度（初期ルール）
-        if max_parent_depth == -1:
-            depth_cache[rule.id] = 999
-        else:
-            depth_cache[rule.id] = max_parent_depth + 1
-
-        return depth_cache[rule.id]
-
-    # 各ルールの深度を計算
-    for rule in VISA_RULES:
-        get_depth(rule)
-
-    # ビザタイプ順→深度順でソート
-    sorted_rules = sorted(
-        VISA_RULES,
-        key=lambda r: (VISA_TYPE_ORDER.get(r.visa_type, 99), depth_cache.get(r.id, 999))
-    )
-
-    # JSONに保存
-    rules_data = {
-        "rules": [
-            {
-                "id": r.id,
-                "name": r.name,
-                "conditions": r.conditions,
-                "action": r.action,
-                "is_or_rule": r.is_or_rule,
-                "visa_type": r.visa_type,
-                "rule_type": r.rule_type.value
-            }
-            for r in sorted_rules
-        ],
-        "goal_actions": list(goal_actions)
-    }
-
-    if save_rules(rules_data):
-        return {"status": "organized", "count": len(sorted_rules)}
+    if request.mode == "id":
+        sorted_rules = _sort_rules_by_id(VISA_RULES)
     else:
+        sorted_rules = _sort_rules_by_dependency(VISA_RULES, goal_actions)
+
+    if not save_rules(_build_rules_data(sorted_rules, goal_actions)):
         raise HTTPException(status_code=500, detail="Failed to save organized rules")
+    return {"status": "organized", "count": len(sorted_rules)}
 
 
 @app.post("/api/rules/reload")

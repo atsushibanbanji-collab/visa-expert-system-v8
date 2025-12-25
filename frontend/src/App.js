@@ -319,6 +319,31 @@ function DiagnosisResult({ result }) {
   );
 }
 
+// 自動整理モード選択モーダル
+function OrganizeModal({ onSelect, onClose }) {
+  const options = [
+    { mode: 'dependency', title: '依存関係順', desc: 'ビザタイプ順 → 依存深度順（ゴール→中間→初期）' },
+    { mode: 'id', title: 'ID番号順', desc: 'ビザタイプ順 → ID番号順（E001→E002→...）' }
+  ];
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content organize-modal" onClick={e => e.stopPropagation()}>
+        <h3>自動整理モードを選択</h3>
+        <div className="organize-options">
+          {options.map(opt => (
+            <button key={opt.mode} className="organize-option" onClick={() => onSelect(opt.mode)}>
+              <span className="option-title">{opt.title}</span>
+              <span className="option-desc">{opt.desc}</span>
+            </button>
+          ))}
+        </div>
+        <button className="modal-cancel" onClick={onClose}>キャンセル</button>
+      </div>
+    </div>
+  );
+}
+
 // 管理ページ
 function AdminPage() {
   const [rules, setRules] = useState([]);
@@ -326,6 +351,7 @@ function AdminPage() {
   const [filterVisaType, setFilterVisaType] = useState('');
   const [message, setMessage] = useState(null);
   const [showNewRuleForm, setShowNewRuleForm] = useState(false);
+  const [showOrganizeModal, setShowOrganizeModal] = useState(false);
 
   const fetchRules = async () => {
     setLoading(true);
@@ -403,16 +429,18 @@ function AdminPage() {
     }
   };
 
-  const handleAutoOrganize = async () => {
-    if (!window.confirm('ルールを依存関係に基づいて自動整理しますか？\n\n整理ロジック:\n・ビザタイプ順（E→L→H-1B→B→J-1）\n・各ビザ内で依存深度順（ゴール→中間→初期）')) return;
+  const handleAutoOrganize = async (mode) => {
+    setShowOrganizeModal(false);
 
     try {
       const response = await fetch(`${API_BASE}/api/rules/auto-organize`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode })
       });
       if (response.ok) {
-        setMessage({ type: 'success', text: 'ルールを整理しました' });
+        const modeText = mode === 'dependency' ? '依存関係順' : 'ID番号順';
+        setMessage({ type: 'success', text: `ルールを${modeText}で整理しました` });
         fetchRules();
       } else {
         setMessage({ type: 'error', text: '整理に失敗しました' });
@@ -459,7 +487,7 @@ function AdminPage() {
           <button className="admin-button" onClick={() => setShowNewRuleForm(true)}>
             新規ルール
           </button>
-          <button className="admin-button secondary" onClick={handleAutoOrganize}>
+          <button className="admin-button secondary" onClick={() => setShowOrganizeModal(true)}>
             自動整理
           </button>
           <button className="admin-button secondary" onClick={handleValidate}>
@@ -473,6 +501,13 @@ function AdminPage() {
           {message.text}
           <button onClick={() => setMessage(null)}>&times;</button>
         </div>
+      )}
+
+      {showOrganizeModal && (
+        <OrganizeModal
+          onSelect={handleAutoOrganize}
+          onClose={() => setShowOrganizeModal(false)}
+        />
       )}
 
       {showNewRuleForm && (
