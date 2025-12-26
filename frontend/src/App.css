@@ -570,6 +570,43 @@ body {
   color: #2b6cb0;
 }
 
+/* ========== 整合性エラー ========== */
+.validation-error {
+  padding: 32px;
+  text-align: center;
+}
+
+.validation-error h3 {
+  font-size: 1.3rem;
+  color: #c53030;
+  margin-bottom: 16px;
+}
+
+.validation-error p {
+  color: #718096;
+  margin-bottom: 20px;
+}
+
+.validation-error .error-issues {
+  background: #fff5f5;
+  border: 1px solid #fed7d7;
+  border-radius: 8px;
+  padding: 16px 24px;
+  margin-bottom: 24px;
+  text-align: left;
+  list-style: none;
+}
+
+.validation-error .error-issues li {
+  color: #c53030;
+  padding: 8px 0;
+  border-bottom: 1px solid #fed7d7;
+}
+
+.validation-error .error-issues li:last-child {
+  border-bottom: none;
+}
+
 /* ========== 診断結果 ========== */
 .diagnosis-result {
   padding: 24px;

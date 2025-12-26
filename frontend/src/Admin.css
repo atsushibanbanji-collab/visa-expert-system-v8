@@ -70,7 +70,8 @@
   margin-bottom: 20px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  white-space: pre-line;
 }
 
 .admin-message.success {
@@ -384,21 +385,6 @@
 }
 
 /* ヘッダー入力フィールド */
-.rule-id-input {
-  width: 55px;
-  padding: 4px 6px;
-  border: 1px solid #e2e8f0;
-  border-radius: 3px;
-  font-size: 0.8rem;
-  background: #f7fafc;
-  font-family: monospace;
-}
-
-.rule-id-input:disabled {
-  background: #edf2f7;
-  color: #718096;
-}
-
 .rule-visa-select,
 .rule-type-select {
   padding: 4px 6px;
@@ -408,16 +394,6 @@
   background: white;
 }
 
-.rule-name-input {
-  flex: 1;
-  padding: 4px 8px;
-  border: 1px solid #e2e8f0;
-  border-radius: 3px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #1a365d;
-  min-width: 100px;
-}
 
 /* 保存/キャンセルボタン */
 .rule-card-actions {
