@@ -10,6 +10,9 @@ function AdminPage() {
   const [message, setMessage] = useState(null);
   const [showNewRuleForm, setShowNewRuleForm] = useState(false);
   const [showOrganizeModal, setShowOrganizeModal] = useState(false);
+  const [showGoalActions, setShowGoalActions] = useState(false);
+  const [goalActions, setGoalActions] = useState([]);
+  const [editingGoalActions, setEditingGoalActions] = useState([]);
 
   const fetchRules = async () => {
     setLoading(true);
@@ -28,8 +31,20 @@ function AdminPage() {
     setLoading(false);
   };
 
+  const fetchGoalActions = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/goal-actions`);
+      const data = await response.json();
+      setGoalActions(data.goal_actions || []);
+      setEditingGoalActions(data.goal_actions || []);
+    } catch (error) {
+      console.error('Error fetching goal actions:', error);
+    }
+  };
+
   useEffect(() => {
     fetchRules();
+    fetchGoalActions();
   }, [filterVisaType]);
 
   const handleSaveRule = async (ruleData, isNew = false) => {
@@ -67,7 +82,6 @@ function AdminPage() {
         if (typeof error.detail === 'string') {
           errorText = error.detail;
         } else if (Array.isArray(error.detail)) {
-          // Pydantic validation error format
           errorText = error.detail.map(e => e.msg || JSON.stringify(e)).join(', ');
         }
         setMessage({ type: 'error', text: errorText });
@@ -78,14 +92,14 @@ function AdminPage() {
     }
   };
 
-  const handleDeleteRule = async (action) => {
-    if (!window.confirm(`このルールを削除しますか？`)) return;
+  const handleDeleteRule = async (index) => {
+    if (!window.confirm('このルールを削除しますか？')) return;
 
     try {
       const response = await fetch(`${API_BASE}/api/rules/delete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action })
+        body: JSON.stringify({ index })
       });
       if (response.ok) {
         fetchRules();
@@ -174,6 +188,47 @@ function AdminPage() {
     }
   };
 
+  const handleOpenGoalActions = () => {
+    setEditingGoalActions([...goalActions]);
+    setShowGoalActions(true);
+  };
+
+  const handleSaveGoalActions = async () => {
+    const filteredActions = editingGoalActions.filter(a => a.trim() !== '');
+    try {
+      const response = await fetch(`${API_BASE}/api/goal-actions`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ goal_actions: filteredActions })
+      });
+      if (response.ok) {
+        setGoalActions(filteredActions);
+        setShowGoalActions(false);
+        setMessage({ type: 'success', text: 'ゴールアクションを保存しました' });
+      } else {
+        setMessage({ type: 'error', text: 'ゴールアクションの保存に失敗しました' });
+      }
+    } catch (error) {
+      console.error('Error saving goal actions:', error);
+      setMessage({ type: 'error', text: 'ゴールアクションの保存に失敗しました' });
+    }
+  };
+
+  const updateGoalAction = (index, value) => {
+    const newActions = [...editingGoalActions];
+    newActions[index] = value;
+    setEditingGoalActions(newActions);
+  };
+
+  const addGoalAction = () => {
+    setEditingGoalActions([...editingGoalActions, '']);
+  };
+
+  const removeGoalAction = (index) => {
+    const newActions = editingGoalActions.filter((_, i) => i !== index);
+    setEditingGoalActions(newActions);
+  };
+
   return (
     <div className="admin-page">
       <div className="admin-header">
@@ -190,7 +245,10 @@ function AdminPage() {
           <button className="admin-button" onClick={() => setShowNewRuleForm(true)}>
             新規ルール
           </button>
-          <button className="admin-button secondary" onClick={() => setShowOrganizeModal(true)}>
+          <button className="admin-button secondary" onClick={handleOpenGoalActions}>
+            ゴール設定
+          </button>
+          <button className="admin-button danger" onClick={() => setShowOrganizeModal(true)}>
             自動整理
           </button>
           <button className="admin-button secondary" onClick={handleValidate}>
@@ -206,6 +264,49 @@ function AdminPage() {
         </div>
       )}
 
+      {showGoalActions && (
+        <div className="modal-overlay" onClick={() => setShowGoalActions(false)}>
+          <div className="goal-actions-modal" onClick={e => e.stopPropagation()}>
+            <h3>ゴールアクション設定</h3>
+            <p className="goal-actions-description">
+              推論の終端となるアクション（結論）を設定します。
+            </p>
+            <div className="goal-actions-list">
+              {editingGoalActions.map((action, index) => (
+                <div key={index} className="goal-action-item">
+                  <input
+                    type="text"
+                    value={action}
+                    onChange={(e) => updateGoalAction(index, e.target.value)}
+                    placeholder="ゴールアクションを入力"
+                  />
+                  <button
+                    className="remove-goal-action"
+                    onClick={() => removeGoalAction(index)}
+                    title="削除"
+                  >
+                    &times;
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="goal-actions-buttons">
+              <button className="admin-button secondary" onClick={addGoalAction}>
+                + 追加
+              </button>
+              <div className="goal-actions-right-buttons">
+                <button className="admin-button secondary" onClick={() => setShowGoalActions(false)}>
+                  キャンセル
+                </button>
+                <button className="admin-button" onClick={handleSaveGoalActions}>
+                  保存
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showOrganizeModal && (
         <OrganizeModal
           onSelect={handleAutoOrganize}
@@ -218,6 +319,7 @@ function AdminPage() {
           rule={{ conditions: [''], action: '', is_or_rule: false, visa_type: 'E' }}
           index={-1}
           isNew={true}
+          totalRules={rules.length}
           onSave={(data) => handleSaveRule(data, true)}
           onCancel={() => setShowNewRuleForm(false)}
           onDelete={() => {}}
@@ -230,13 +332,13 @@ function AdminPage() {
         ) : (
           rules.map((rule, index) => (
             <AdminRuleCard
-              key={rule.action}
+              key={index}
               rule={rule}
               index={index}
               isNew={false}
               totalRules={rules.length}
               onSave={(data) => handleSaveRule(data, false)}
-              onDelete={() => handleDeleteRule(rule.action)}
+              onDelete={() => handleDeleteRule(index)}
               onMoveUp={() => moveRule(index, -1)}
               onMoveDown={() => moveRule(index, 1)}
             />

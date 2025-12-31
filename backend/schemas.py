@@ -25,16 +25,16 @@ class GoBackRequest(BaseModel):
 
 class RuleRequest(BaseModel):
     conditions: List[str]
-    action: str  # 一意な識別子
+    action: str
     is_or_rule: bool = False
     visa_type: str = ""
     rule_type: str = "i"  # "i" for INITIAL, "m" for MIDDLE
-    original_action: Optional[str] = None  # 編集時の元のaction
+    index: Optional[int] = None  # 編集時の対象インデックス（0始まり）
     insert_after: Optional[int] = None  # 挿入位置（0=先頭、N=N番目の後、None=末尾）
 
 
 class DeleteRequest(BaseModel):
-    action: str
+    index: int  # 削除対象のインデックス（0始まり）
 
 
 class ReorderRequest(BaseModel):
@@ -43,3 +43,7 @@ class ReorderRequest(BaseModel):
 
 class AutoOrganizeRequest(BaseModel):
     mode: str = "dependency"  # "dependency" or "action"
+
+
+class GoalActionsRequest(BaseModel):
+    goal_actions: List[str]

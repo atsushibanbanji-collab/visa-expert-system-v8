@@ -10,7 +10,6 @@ function AdminRuleCard({ rule, index, isNew, totalRules, onSave, onCancel, onDel
   });
   const [hasChanges, setHasChanges] = useState(isNew);
   const [insertAfter, setInsertAfter] = useState(''); // 挿入位置（空=末尾）
-  const originalAction = rule.action || '';
 
   const updateField = (field, value) => {
     setFormData({ ...formData, [field]: value });
@@ -56,8 +55,9 @@ function AdminRuleCard({ rule, index, isNew, totalRules, onSave, onCancel, onDel
       conditions: cleanedConditions,
       rule_type: 'i'
     };
-    if (!isNew && originalAction) {
-      saveData.original_action = originalAction;
+    if (!isNew) {
+      // 既存ルールの更新はindexで特定
+      saveData.index = index;
     }
     if (isNew && insertAfter !== '') {
       const pos = parseInt(insertAfter, 10);

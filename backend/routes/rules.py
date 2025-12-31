@@ -9,12 +9,11 @@ from knowledge import (
     get_all_rules, VISA_RULES, save_rules, reload_rules
 )
 from knowledge.loader import load_goal_actions_from_json
-from schemas import RuleRequest, DeleteRequest, ReorderRequest, AutoOrganizeRequest
+from schemas import RuleRequest, DeleteRequest, ReorderRequest, AutoOrganizeRequest, GoalActionsRequest
 from services.validation import check_rules_integrity
 from services.rule_helpers import (
-    rules_to_dict_list, build_rules_data, find_rule_by_action,
-    rules_excluding_action, sort_rules_by_action, sort_rules_by_dependency,
-    request_to_dict
+    rules_to_dict_list, build_rules_data, sort_rules_by_action,
+    sort_rules_by_dependency, request_to_dict
 )
 
 router = APIRouter(prefix="/api", tags=["rules"])
@@ -61,20 +60,17 @@ async def validate_rules(visa_type: Optional[str] = None):
 
 @router.post("/rules")
 async def create_rule(rule: RuleRequest):
-    """新しいルールを作成（actionが識別子）
+    """新しいルールを作成
 
     insert_after: 挿入位置（0=先頭、N=N番目の後、None=末尾）
     """
     reload_rules()
-    if find_rule_by_action(rule.action):
-        raise HTTPException(status_code=400, detail=f"同じTHEN「{rule.action}」を持つルールが既に存在します")
-
     rules_data = build_rules_data(VISA_RULES)
     new_rule = request_to_dict(rule)
 
     # 挿入位置を決定
     if rule.insert_after is not None:
-        insert_index = rule.insert_after  # 0なら先頭、Nならindex N に挿入
+        insert_index = rule.insert_after
         if insert_index < 0:
             insert_index = 0
         elif insert_index > len(rules_data["rules"]):
@@ -92,36 +88,40 @@ async def create_rule(rule: RuleRequest):
 
 @router.put("/rules")
 async def update_rule(rule: RuleRequest):
-    """既存ルールを更新（original_actionで対象を特定）"""
+    """既存ルールを更新（indexで対象を特定）"""
     reload_rules()
-    target_action = rule.original_action or rule.action
 
-    if not find_rule_by_action(target_action):
-        raise HTTPException(status_code=404, detail="Rule not found")
+    if rule.index is None:
+        raise HTTPException(status_code=400, detail="index is required for update")
 
-    # actionを変更する場合、新しいactionが既に存在しないか確認
-    if rule.original_action and rule.action != rule.original_action:
-        if find_rule_by_action(rule.action):
-            raise HTTPException(status_code=400, detail=f"同じTHEN「{rule.action}」を持つルールが既に存在します")
+    if rule.index < 0 or rule.index >= len(VISA_RULES):
+        raise HTTPException(status_code=404, detail="Rule not found at specified index")
 
-    rules_data = build_rules_data(rules_excluding_action(target_action))
-    rules_data["rules"].append(request_to_dict(rule))
+    # インデックス位置のルールだけを更新
+    rules_data = build_rules_data(VISA_RULES)
+    rules_data["rules"][rule.index] = request_to_dict(rule)
 
     if not save_rules(rules_data):
         raise HTTPException(status_code=500, detail="Failed to save rule")
-    return {"status": "updated", "action": rule.action}
+    return {"status": "updated", "action": rule.action, "index": rule.index}
 
 
 @router.post("/rules/delete")
 async def delete_rule(request: DeleteRequest):
-    """ルールを削除（actionで特定）"""
+    """ルールを削除（indexで特定）"""
     reload_rules()
-    if not find_rule_by_action(request.action):
-        raise HTTPException(status_code=404, detail="Rule not found")
 
-    if not save_rules(build_rules_data(rules_excluding_action(request.action))):
+    if request.index < 0 or request.index >= len(VISA_RULES):
+        raise HTTPException(status_code=404, detail="Rule not found at specified index")
+
+    # インデックス位置のルールだけを削除
+    rules_data = build_rules_data(VISA_RULES)
+    deleted_action = rules_data["rules"][request.index]["action"]
+    del rules_data["rules"][request.index]
+
+    if not save_rules(rules_data):
         raise HTTPException(status_code=500, detail="Failed to delete rule")
-    return {"status": "deleted", "action": request.action}
+    return {"status": "deleted", "index": request.index, "action": deleted_action}
 
 
 @router.post("/rules/reorder")
@@ -167,3 +167,21 @@ async def reload_all_rules():
     """ルールをJSONファイルから再読み込み"""
     reload_rules()
     return {"status": "reloaded", "count": len(VISA_RULES)}
+
+
+@router.get("/goal-actions")
+async def get_goal_actions():
+    """ゴールアクション一覧を取得"""
+    goal_actions = load_goal_actions_from_json()
+    return {"goal_actions": list(goal_actions)}
+
+
+@router.put("/goal-actions")
+async def update_goal_actions(request: GoalActionsRequest):
+    """ゴールアクションを更新"""
+    reload_rules()
+    rules_data = build_rules_data(VISA_RULES, set(request.goal_actions))
+
+    if not save_rules(rules_data):
+        raise HTTPException(status_code=500, detail="Failed to save goal actions")
+    return {"status": "updated", "count": len(request.goal_actions)}

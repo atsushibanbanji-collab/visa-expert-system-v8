@@ -64,6 +64,14 @@
   background: #4a5568;
 }
 
+.admin-button.danger {
+  background: #e53e3e;
+}
+
+.admin-button.danger:hover {
+  background: #c53030;
+}
+
 .admin-message {
   padding: 12px 20px;
   border-radius: 6px;
@@ -555,4 +563,87 @@
 
 .modal-cancel:hover {
   background: #edf2f7;
+}
+
+
+/* ========== ゴールアクションモーダル ========== */
+.goal-actions-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.goal-actions-modal h3 {
+  margin: 0 0 8px 0;
+  color: #1a365d;
+  font-size: 1.2rem;
+}
+
+.goal-actions-description {
+  color: #718096;
+  font-size: 0.9rem;
+  margin-bottom: 16px;
+}
+
+.goal-actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.goal-action-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.goal-action-item input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.goal-action-item input:focus {
+  outline: none;
+  border-color: #3182ce;
+  box-shadow: 0 0 0 2px rgba(49, 130, 206, 0.2);
+}
+
+.remove-goal-action {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #fed7d7;
+  background: white;
+  color: #e53e3e;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remove-goal-action:hover {
+  background: #fff5f5;
+}
+
+.goal-actions-buttons {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.goal-actions-right-buttons {
+  display: flex;
+  gap: 8px;
 }
