@@ -7,7 +7,7 @@ function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [filterVisaType, setFilterVisaType] = useState('');
   const [message, setMessage] = useState(null);
-  const [showNewRuleForm, setShowNewRuleForm] = useState(false);
+  const [insertPosition, setInsertPosition] = useState(null); // null=非表示, 数値=挿入位置(その番号の後に挿入)
 
   const fetchRules = async () => {
     setLoading(true);
@@ -41,7 +41,7 @@ function AdminPage() {
       });
 
       if (response.ok) {
-        setShowNewRuleForm(false);
+        setInsertPosition(null);
         fetchRules();
 
         try {
@@ -162,8 +162,8 @@ function AdminPage() {
             <option value="B">Bビザ</option>
             <option value="J-1">J-1ビザ</option>
           </select>
-          <button className="admin-button" onClick={() => setShowNewRuleForm(true)}>
-            新規ルール
+          <button className="admin-button" onClick={() => setInsertPosition(rules.length)}>
+            新規ルール（末尾）
           </button>
           <button className="admin-button secondary" onClick={handleValidate}>
             整合性チェック
@@ -178,35 +178,82 @@ function AdminPage() {
         </div>
       )}
 
-      {showNewRuleForm && (
-        <AdminRuleCard
-          rule={{ conditions: [''], action: '', is_or_rule: false, visa_type: 'E' }}
-          index={-1}
-          isNew={true}
-          totalRules={rules.length}
-          onSave={(data) => handleSaveRule(data, true)}
-          onCancel={() => setShowNewRuleForm(false)}
-          onDelete={() => {}}
-        />
-      )}
-
       <div className="admin-rules-cards">
         {loading ? (
           <p className="loading-text">読み込み中...</p>
         ) : (
-          rules.map((rule, index) => (
-            <AdminRuleCard
-              key={rule.action}
-              rule={rule}
-              index={index}
-              isNew={false}
-              totalRules={rules.length}
-              onSave={(data) => handleSaveRule(data, false)}
-              onDelete={() => handleDeleteRule(index)}
-              onMoveUp={() => moveRule(index, -1)}
-              onMoveDown={() => moveRule(index, 1)}
-            />
-          ))
+          <>
+            {/* 先頭への挿入ボタン */}
+            {insertPosition === 0 ? (
+              <AdminRuleCard
+                key="new-rule-0"
+                rule={{ conditions: [''], action: '', is_or_rule: false, visa_type: 'E' }}
+                index={-1}
+                isNew={true}
+                totalRules={rules.length}
+                onSave={(data) => handleSaveRule({ ...data, insert_after: 0 }, true)}
+                onCancel={() => setInsertPosition(null)}
+                onDelete={() => {}}
+              />
+            ) : (
+              <button className="insert-rule-btn" onClick={() => setInsertPosition(0)}>
+                ＋ 先頭に挿入
+              </button>
+            )}
+
+            {rules.map((rule, index) => (
+              <React.Fragment key={rule.action}>
+                <AdminRuleCard
+                  rule={rule}
+                  index={index}
+                  isNew={false}
+                  totalRules={rules.length}
+                  onSave={(data) => handleSaveRule(data, false)}
+                  onDelete={() => handleDeleteRule(index)}
+                  onMoveUp={() => moveRule(index, -1)}
+                  onMoveDown={() => moveRule(index, 1)}
+                />
+
+                {/* 各ルールの後に挿入ボタン（末尾以外） */}
+                {index < rules.length - 1 && (
+                  insertPosition === index + 1 ? (
+                    <AdminRuleCard
+                      key={`new-rule-${index + 1}`}
+                      rule={{ conditions: [''], action: '', is_or_rule: false, visa_type: 'E' }}
+                      index={-1}
+                      isNew={true}
+                      totalRules={rules.length}
+                      onSave={(data) => handleSaveRule({ ...data, insert_after: index + 1 }, true)}
+                      onCancel={() => setInsertPosition(null)}
+                      onDelete={() => {}}
+                    />
+                  ) : (
+                    <button className="insert-rule-btn" onClick={() => setInsertPosition(index + 1)}>
+                      ＋
+                    </button>
+                  )
+                )}
+              </React.Fragment>
+            ))}
+
+            {/* 末尾への挿入ボタン */}
+            {insertPosition === rules.length ? (
+              <AdminRuleCard
+                key="new-rule-end"
+                rule={{ conditions: [''], action: '', is_or_rule: false, visa_type: 'E' }}
+                index={-1}
+                isNew={true}
+                totalRules={rules.length}
+                onSave={(data) => handleSaveRule({ ...data, insert_after: rules.length }, true)}
+                onCancel={() => setInsertPosition(null)}
+                onDelete={() => {}}
+              />
+            ) : (
+              <button className="insert-rule-btn" onClick={() => setInsertPosition(rules.length)}>
+                ＋ 末尾に追加
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>
