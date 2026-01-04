@@ -8,6 +8,15 @@ function AdminPage() {
   const [filterVisaType, setFilterVisaType] = useState('');
   const [message, setMessage] = useState(null);
   const [insertPosition, setInsertPosition] = useState(null); // null=非表示, 数値=挿入位置(その番号の後に挿入)
+  const pageRef = React.useRef(null);
+
+  const scrollToTop = () => {
+    // Try both the element and window scroll
+    if (pageRef.current) {
+      pageRef.current.scrollTop = 0;
+    }
+    window.scrollTo(0, 0);
+  };
 
   const fetchRules = async () => {
     setLoading(true);
@@ -150,7 +159,7 @@ function AdminPage() {
   };
 
   return (
-    <div className="admin-page">
+    <div className="admin-page" ref={pageRef}>
       <div className="admin-header">
         <h2>ルール管理</h2>
         <div className="admin-actions">
@@ -256,6 +265,10 @@ function AdminPage() {
           </>
         )}
       </div>
+
+      <button className="scroll-to-top-btn" onClick={scrollToTop} title="一番上に戻る">
+        ↑
+      </button>
     </div>
   );
 }

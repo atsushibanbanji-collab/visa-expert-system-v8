@@ -387,165 +387,198 @@ body {
 .visa-section-H1B .visa-section-title { background: #dd6b20; }
 .visa-section-J1 .visa-section-title { background: #d53f8c; }
 
-/* ルールカード */
+/* ルールカード（推論画面） */
 .rule-card {
   background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 12px;
-  transition: box-shadow 0.2s;
-}
-
-.rule-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  padding: 10px;
+  margin-bottom: 8px;
 }
 
 .rule-card.rule-fired {
-  border-left: 4px solid #48bb78;
+  border: 2px solid #48bb78;
   background: #f0fff4;
 }
 
 .rule-card.rule-blocked {
-  border-left: 4px solid #fc8181;
+  border: 2px solid #fc8181;
   background: #fff5f5;
   opacity: 0.7;
 }
 
 .rule-card.rule-uncertain {
-  border-left: 4px solid #ecc94b;
+  border: 2px solid #ecc94b;
   background: #fffff0;
   opacity: 0.85;
 }
 
-.rule-header {
+.rule-card .rule-card-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
 }
 
-.rule-id {
+.rule-card .rule-number {
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #718096;
+  min-width: 32px;
+}
+
+.rule-card .rule-visa-badge {
   background: #e2e8f0;
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 0.75rem;
-  font-family: monospace;
+  font-weight: 600;
+  color: #4a5568;
 }
 
-.rule-name {
-  flex: 1;
-  font-weight: 500;
-  color: #2d3748;
-}
-
-.rule-status-badge {
-  padding: 4px 12px;
-  border-radius: 20px;
+.rule-card .rule-operator-badge {
+  background: #ebf8ff;
+  padding: 2px 8px;
+  border-radius: 4px;
   font-size: 0.75rem;
+  font-weight: 600;
+  color: #2b6cb0;
+}
+
+.rule-card .rule-status-badge {
+  margin-left: auto;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.7rem;
   font-weight: 600;
 }
 
-.rule-status-badge.fired {
+.rule-card .rule-status-badge.fired {
   background: #c6f6d5;
   color: #22543d;
 }
 
-.rule-status-badge.blocked {
+.rule-card .rule-status-badge.blocked {
   background: #fed7d7;
   color: #822727;
 }
 
-.rule-status-badge.uncertain {
+.rule-card .rule-status-badge.uncertain {
   background: #fefcbf;
   color: #744210;
 }
 
-.rule-status-badge.pending {
+.rule-card .rule-status-badge.evaluating {
+  background: #bee3f8;
+  color: #2a4365;
+}
+
+.rule-card .rule-status-badge.pending {
   background: #e2e8f0;
   color: #4a5568;
 }
 
-/* 条件部 */
-.rule-conditions {
+/* ルールカード本体 */
+.rule-card .rule-card-body {
   display: flex;
-  gap: 12px;
-  margin-bottom: 12px;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.conditions-label,
-.conclusion-label {
+.rule-card .rule-card-conclusion {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: #f0fff4;
+  border-radius: 4px;
+}
+
+.rule-card .rule-card-conclusion .label {
+  font-weight: 600;
+  color: #276749;
   font-size: 0.75rem;
-  font-weight: 700;
-  color: #718096;
   min-width: 40px;
 }
 
-.conditions-list {
-  flex: 1;
+.rule-card .rule-card-conclusion .conclusion-value {
+  font-size: 0.85rem;
+  color: #2d3748;
 }
 
-.condition-item {
-  padding: 6px 10px;
+.rule-card .rule-card-conclusion .conclusion-value.conclusion-fired {
+  color: #276749;
+  font-weight: 600;
+}
+
+.rule-card .rule-card-conditions {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 4px 8px;
+  background: #ebf8ff;
   border-radius: 4px;
-  font-size: 0.85rem;
-  margin-bottom: 4px;
+}
+
+.rule-card .rule-card-conditions .label {
+  font-weight: 600;
+  color: #2b6cb0;
+  font-size: 0.75rem;
+  min-width: 40px;
+  padding-top: 2px;
+}
+
+.rule-card .rule-card-conditions .conditions-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rule-card .condition-item {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
   background: #f7fafc;
   border: 1px solid #e2e8f0;
 }
 
-.condition-item.condition-true {
+.rule-card .condition-item.condition-true {
   background: #c6f6d5;
   border-color: #9ae6b4;
   color: #22543d;
 }
 
-.condition-item.condition-false {
+.rule-card .condition-item.condition-false {
   background: #fed7d7;
   border-color: #feb2b2;
   color: #822727;
 }
 
-.condition-item.condition-unknown {
+.rule-card .condition-item.condition-unknown {
   background: #fefcbf;
   border-color: #f6e05e;
   color: #744210;
 }
 
-.condition-item.condition-derived {
+.rule-card .condition-item.condition-derived {
   border-left: 3px solid #805ad5;
 }
 
-.derived-marker {
+.rule-card .derived-marker {
   color: #805ad5;
-  margin-right: 6px;
+  margin-right: 4px;
+  font-size: 0.7rem;
 }
 
-.operator {
-  display: inline-block;
-  padding: 2px 8px;
-  font-size: 0.75rem;
+.rule-card .condition-operator {
+  font-size: 0.7rem;
   font-weight: 600;
   color: #718096;
-}
-
-/* 結論部 */
-.rule-conclusion {
-  display: flex;
-  gap: 12px;
-  padding-top: 12px;
-  border-top: 1px dashed #e2e8f0;
-}
-
-.conclusion-text {
-  flex: 1;
-  color: #4a5568;
-  font-size: 0.9rem;
-}
-
-.conclusion-text.conclusion-derived {
-  color: #2b6cb0;
-  font-weight: 600;
+  padding: 0 2px;
 }
 
 /* 導出された事実 */

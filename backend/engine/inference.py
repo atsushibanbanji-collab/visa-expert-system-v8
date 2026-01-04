@@ -145,6 +145,17 @@ class InferenceEngine:
                         changed = True
                         self._update_dependent_rules(action, FactStatus.TRUE)
 
+                    # ANDルールが発火した場合、UNKNOWNだった上流条件もTRUEとして導出
+                    if not state.rule.is_or_rule:
+                        for cond in state.rule.conditions:
+                            finding_val = self.working_memory.findings.get(cond)
+                            hypo_val = self.working_memory.hypotheses.get(cond)
+                            if finding_val == FactStatus.UNKNOWN and hypo_val != FactStatus.TRUE:
+                                self.working_memory.put_hypothesis(cond, FactStatus.TRUE)
+                                self.reasoning_log.append(f"推論: 「{cond}」→ true（発火ルールの上流条件）")
+                                changed = True
+                                self._update_dependent_rules(cond, FactStatus.TRUE)
+
                 elif RuleStatus.is_negative(state.status):
                     action = state.rule.action
                     if not state.rule.is_or_rule:
@@ -216,13 +227,16 @@ class InferenceEngine:
         """推論画面表示用のルール情報を取得"""
         result = []
 
+        # 元のルール順序でインデックスを取得
+        rule_index_map = {r.id: idx for idx, r in enumerate(self.rules)}
+
         for state in self.rule_states.values():
             rule = state.rule
             conditions_info = [
                 {
                     "text": cond,
                     "status": self.FACT_STATUS_DISPLAY.get(
-                        self.working_memory.get_value(cond), "unchecked"
+                        self.evaluator.get_effective_value(cond), "unchecked"
                     ),
                     "is_derived": cond in self.derived_conditions
                 }
@@ -231,7 +245,7 @@ class InferenceEngine:
 
             result.append({
                 "id": rule.id,
-                "name": rule.name,
+                "index": rule_index_map.get(rule.id, 0),
                 "action": rule.action,
                 "visa_type": rule.visa_type,
                 "conditions": conditions_info,

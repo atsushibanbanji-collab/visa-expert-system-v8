@@ -23,32 +23,50 @@ function RuleCard({ rule }) {
     return classes;
   };
 
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'fired': return '発火';
+      case 'blocked': return '不可';
+      case 'uncertain': return '不明';
+      case 'evaluating': return '評価中';
+      default: return '待機';
+    }
+  };
+
   return (
     <div className={`rule-card ${getStatusClass(rule.status)}`}>
-      <div className="rule-header">
-        <span className="rule-id">{rule.action}</span>
-        <span className="rule-name">{rule.name}</span>
+      <div className="rule-card-header">
+        <span className="rule-number">#{rule.index + 1}</span>
+        <span className="rule-visa-badge">{rule.visa_type}</span>
+        <span className="rule-operator-badge">{rule.operator}</span>
         <span className={`rule-status-badge ${rule.status}`}>
-          {rule.status === 'fired' ? '発火' : rule.status === 'blocked' ? '不可' : rule.status === 'uncertain' ? '不明' : '評価中'}
+          {getStatusLabel(rule.status)}
         </span>
       </div>
-      <div className="rule-conditions">
-        <span className="conditions-label">IF</span>
-        <div className="conditions-list">
-          {rule.conditions.map((cond, index) => (
-            <React.Fragment key={index}>
-              <div className={getConditionClass(cond)}>
-                {cond.is_derived && <span className="derived-marker">&#x25C6;</span>}
-                {cond.text}
-              </div>
-              {index < rule.conditions.length - 1 && <span className="operator">{rule.operator}</span>}
-            </React.Fragment>
-          ))}
+
+      <div className="rule-card-body">
+        <div className="rule-card-conclusion">
+          <span className="label">THEN:</span>
+          <span className={`conclusion-value ${rule.status === 'fired' ? 'conclusion-fired' : ''}`}>
+            {rule.action}
+          </span>
         </div>
-      </div>
-      <div className="rule-conclusion">
-        <span className="conclusion-label">THEN</span>
-        <span className={`conclusion-text ${rule.status === 'fired' ? 'conclusion-derived' : ''}`}>{rule.conclusion}</span>
+        <div className="rule-card-conditions">
+          <span className="label">IF:</span>
+          <div className="conditions-list">
+            {rule.conditions.map((cond, idx) => (
+              <React.Fragment key={idx}>
+                <span className={getConditionClass(cond)}>
+                  {cond.is_derived && <span className="derived-marker">&#x25C6;</span>}
+                  {cond.text}
+                </span>
+                {idx < rule.conditions.length - 1 && (
+                  <span className="condition-operator">{rule.operator}</span>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

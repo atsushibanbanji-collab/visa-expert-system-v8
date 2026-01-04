@@ -22,9 +22,6 @@
   padding: 20px 24px;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  position: sticky;
-  top: 16px;
-  z-index: 100;
 }
 
 .admin-header h2 {
@@ -107,6 +104,29 @@
   font-size: 1.2rem;
   cursor: pointer;
   opacity: 0.6;
+}
+
+/* 一番上に戻るボタン */
+.scroll-to-top-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 48px;
+  height: 48px;
+  background: #3182ce;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: background 0.2s, transform 0.2s;
+  z-index: 200;
+}
+
+.scroll-to-top-btn:hover {
+  background: #2b6cb0;
+  transform: translateY(-2px);
 }
 
 /* ========== 管理画面カード形式 ========== */
