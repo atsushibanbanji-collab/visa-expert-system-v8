@@ -729,9 +729,87 @@ body {
   font-size: 0.85rem;
 }
 
+.unknown-conditions-title {
+  font-weight: 600;
+  color: #744210;
+}
+
 .unknown-conditions ul {
   margin-top: 8px;
   padding-left: 20px;
+}
+
+/* 条件ツリー */
+.condition-tree {
+  list-style: none;
+  padding-left: 0;
+  margin-top: 12px;
+}
+
+.condition-tree ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.condition-branch {
+  margin-bottom: 12px;
+}
+
+.condition-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.condition-group.operator-or {
+  background: #ebf8ff;
+  border-left: 4px solid #3182ce;
+}
+
+.condition-group.operator-and {
+  background: #faf5ff;
+  border-left: 4px solid #805ad5;
+}
+
+.operator-badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.operator-badge.operator-or {
+  background: #3182ce;
+  color: white;
+}
+
+.operator-badge.operator-and {
+  background: #805ad5;
+  color: white;
+}
+
+.operator-label {
+  font-size: 0.85rem;
+  color: #4a5568;
+}
+
+.sub-conditions {
+  padding-left: 20px;
+  border-left: 2px solid #e2e8f0;
+  margin-left: 8px;
+}
+
+.condition-leaf {
+  padding: 6px 12px;
+  background: #f7fafc;
+  border-radius: 4px;
+  margin-bottom: 6px;
+  border: 1px solid #e2e8f0;
+  color: #2d3748;
+  list-style: none;
 }
 
 .unknown-item {

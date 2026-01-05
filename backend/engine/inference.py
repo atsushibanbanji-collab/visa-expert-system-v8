@@ -184,6 +184,49 @@ class InferenceEngine:
             for g in get_goal_rules()
         )
 
+    def _build_unknown_condition_tree(self, rule: Rule, visited: Set[str] = None) -> List[Dict[str, Any]]:
+        """ゴールルールから末端のUNKNOWN条件をツリー構造で収集する
+
+        上位条件を経由せず、最初からツリー探索で末端条件を直接収集する。
+        OR/ANDの構造情報も保持して返す。
+        """
+        if visited is None:
+            visited = set()
+
+        if rule.id in visited:
+            return []
+        visited.add(rule.id)
+
+        result = []
+
+        for cond in rule.conditions:
+            cond_value = self.working_memory.get_value(cond)
+
+            if cond_value not in (None, FactStatus.UNKNOWN, FactStatus.PENDING):
+                continue
+
+            deriving_rules = self.evaluator.get_deriving_rules(cond)
+
+            if not deriving_rules:
+                result.append({
+                    "text": cond,
+                    "operator": None,
+                    "sub_conditions": []
+                })
+            else:
+                for deriving_rule in deriving_rules:
+                    sub_tree = self._build_unknown_condition_tree(deriving_rule, visited.copy())
+
+                    if sub_tree:
+                        operator = "OR" if deriving_rule.is_or_rule else "AND"
+                        result.append({
+                            "text": cond,
+                            "operator": operator,
+                            "sub_conditions": sub_tree
+                        })
+
+        return result
+
     def _generate_result(self) -> Dict[str, Any]:
         """診断結果を生成"""
         applicable_visas = []
@@ -192,6 +235,7 @@ class InferenceEngine:
 
         for goal_rule in get_goal_rules():
             state = self.rule_states.get(goal_rule.id)
+
             if state:
                 if state.status == RuleStatus.FIRED:
                     applicable_visas.append({
@@ -200,16 +244,14 @@ class InferenceEngine:
                         "rule_id": goal_rule.id
                     })
                 elif state.status != RuleStatus.BLOCKED:
-                    unknowns = [
-                        cond for cond in goal_rule.conditions
-                        if self.working_memory.get_value(cond) == FactStatus.UNKNOWN
-                    ]
-                    if unknowns:
+                    condition_tree = self._build_unknown_condition_tree(goal_rule)
+
+                    if condition_tree:
                         conditional_visas.append({
                             "visa": goal_rule.action,
                             "type": goal_rule.visa_type,
                             "rule_id": goal_rule.id,
-                            "unknown_conditions": unknowns
+                            "unknown_conditions": condition_tree
                         })
 
         for cond, status in self.working_memory.findings.items():
