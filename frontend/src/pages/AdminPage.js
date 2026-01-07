@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE } from '../config';
+import { VISA_TYPES } from '../constants';
 import AdminRuleCard from '../components/admin/AdminRuleCard';
 
 function AdminPage() {
@@ -165,11 +166,9 @@ function AdminPage() {
         <div className="admin-actions">
           <select value={filterVisaType} onChange={(e) => setFilterVisaType(e.target.value)}>
             <option value="">全てのビザタイプ</option>
-            <option value="E">Eビザ</option>
-            <option value="L">Lビザ</option>
-            <option value="H-1B">H-1Bビザ</option>
-            <option value="B">Bビザ</option>
-            <option value="J-1">J-1ビザ</option>
+            {VISA_TYPES.map(vt => (
+              <option key={vt} value={vt}>{vt}ビザ</option>
+            ))}
           </select>
           <button className="admin-button" onClick={() => setInsertPosition(rules.length)}>
             新規ルール（末尾）

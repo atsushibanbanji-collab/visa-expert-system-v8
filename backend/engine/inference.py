@@ -72,7 +72,7 @@ class InferenceEngine:
             "next_question": next_q,
             "is_complete": is_complete,
             "derived_facts": list(self.working_memory.hypotheses.keys()),
-            "rules_status": self._get_rules_display_info()
+            "rules_status": self.get_rules_display_info()
         }
 
         if is_complete:
@@ -156,11 +156,12 @@ class InferenceEngine:
                                 changed = True
                                 self._update_dependent_rules(cond, FactStatus.TRUE)
 
-                elif RuleStatus.is_negative(state.status):
+                elif state.status == RuleStatus.BLOCKED:
+                    # BLOCKEDのみFALSEを伝播（UNCERTAINは伝播しない）
                     action = state.rule.action
                     if not state.rule.is_or_rule:
                         can_derive = any(
-                            s.rule.action == action and not RuleStatus.is_negative(s.status)
+                            s.rule.action == action and s.status not in (RuleStatus.BLOCKED,)
                             for s in self.rule_states.values()
                         )
                         if not can_derive and self.working_memory.get_value(action) != FactStatus.FALSE:
@@ -184,54 +185,20 @@ class InferenceEngine:
             for g in get_goal_rules()
         )
 
-    def _build_unknown_condition_tree(self, rule: Rule, visited: Set[str] = None) -> List[Dict[str, Any]]:
-        """ゴールルールから末端のUNKNOWN条件をツリー構造で収集する
-
-        上位条件を経由せず、最初からツリー探索で末端条件を直接収集する。
-        OR/ANDの構造情報も保持して返す。
-        """
-        if visited is None:
-            visited = set()
-
-        if rule.id in visited:
-            return []
-        visited.add(rule.id)
-
-        result = []
-
-        for cond in rule.conditions:
-            cond_value = self.working_memory.get_value(cond)
-
-            if cond_value not in (None, FactStatus.UNKNOWN, FactStatus.PENDING):
-                continue
-
-            deriving_rules = self.evaluator.get_deriving_rules(cond)
-
-            if not deriving_rules:
-                result.append({
-                    "text": cond,
-                    "operator": None,
-                    "sub_conditions": []
-                })
-            else:
-                for deriving_rule in deriving_rules:
-                    sub_tree = self._build_unknown_condition_tree(deriving_rule, visited.copy())
-
-                    if sub_tree:
-                        operator = "OR" if deriving_rule.is_or_rule else "AND"
-                        result.append({
-                            "text": cond,
-                            "operator": operator,
-                            "sub_conditions": sub_tree
-                        })
-
-        return result
+    def _get_unknown_answered_conditions(self) -> List[str]:
+        """「わからない」と回答された質問を取得"""
+        return [
+            cond for cond, status in self.working_memory.findings.items()
+            if status == FactStatus.UNKNOWN
+        ]
 
     def _generate_result(self) -> Dict[str, Any]:
         """診断結果を生成"""
         applicable_visas = []
         conditional_visas = []
-        unknown_conditions = []
+
+        # 「わからない」と回答された質問を取得
+        unknown_answered = self._get_unknown_answered_conditions()
 
         for goal_rule in get_goal_rules():
             state = self.rule_states.get(goal_rule.id)
@@ -244,28 +211,51 @@ class InferenceEngine:
                         "rule_id": goal_rule.id
                     })
                 elif state.status != RuleStatus.BLOCKED:
-                    condition_tree = self._build_unknown_condition_tree(goal_rule)
-
-                    if condition_tree:
+                    # このビザに関連する下位条件（導出不可な質問）のみ抽出
+                    relevant_unknowns = self._get_relevant_leaf_conditions(goal_rule, unknown_answered)
+                    if relevant_unknowns:
                         conditional_visas.append({
                             "visa": goal_rule.action,
                             "type": goal_rule.visa_type,
                             "rule_id": goal_rule.id,
-                            "unknown_conditions": condition_tree
+                            "unknown_conditions": relevant_unknowns
                         })
-
-        for cond, status in self.working_memory.findings.items():
-            if status == FactStatus.UNKNOWN:
-                unknown_conditions.append(cond)
 
         return {
             "applicable_visas": applicable_visas,
             "conditional_visas": conditional_visas,
-            "unknown_conditions": unknown_conditions,
+            "unknown_conditions": unknown_answered,
             "reasoning_log": self.reasoning_log
         }
 
-    def _get_rules_display_info(self) -> List[Dict[str, Any]]:
+    def _get_relevant_leaf_conditions(self, rule: Rule, unknown_conditions: List[str]) -> List[str]:
+        """ルールに関連する下位条件（葉ノード）のみを取得"""
+        relevant = []
+        visited = set()
+        self._collect_leaf_conditions(rule, unknown_conditions, relevant, visited)
+        return relevant
+
+    def _collect_leaf_conditions(self, rule: Rule, unknown_conditions: List[str],
+                                  result: List[str], visited: Set[str]):
+        """再帰的に下位条件を収集"""
+        if rule.id in visited:
+            return
+        visited.add(rule.id)
+
+        for cond in rule.conditions:
+            if cond in unknown_conditions:
+                # この条件が導出可能かチェック
+                if cond in self.derived_conditions:
+                    # 導出可能なら、その導出ルールを辿る
+                    deriving_rules = self.evaluator.get_deriving_rules(cond)
+                    for dr in deriving_rules:
+                        self._collect_leaf_conditions(dr, unknown_conditions, result, visited)
+                else:
+                    # 導出不可（葉ノード）なら結果に追加
+                    if cond not in result:
+                        result.append(cond)
+
+    def get_rules_display_info(self) -> List[Dict[str, Any]]:
         """推論画面表示用のルール情報を取得"""
         result = []
 
@@ -332,7 +322,7 @@ class InferenceEngine:
                 {"condition": c, "answer": s.value}
                 for c, s in self.working_memory.answer_history
             ],
-            "rules_status": self._get_rules_display_info()
+            "rules_status": self.get_rules_display_info()
         }
 
     def restart(self) -> Optional[str]:
@@ -350,7 +340,7 @@ class InferenceEngine:
                 {"condition": c, "answer": s.value}
                 for c, s in self.working_memory.answer_history
             ],
-            "rules_status": self._get_rules_display_info(),
+            "rules_status": self.get_rules_display_info(),
             "derived_facts": list(self.working_memory.hypotheses.keys()),
             "is_complete": is_complete
         }

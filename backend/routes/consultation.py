@@ -37,11 +37,16 @@ async def start_consultation(request: StartRequest):
 
     sessions[request.session_id] = engine
 
+    # デバッグ: 診断開始
+    print(f"\n{'#'*60}")
+    print(f"診断開始 - 最初の質問: {first_question}")
+    print(f"{'#'*60}\n")
+
     return {
         "session_id": request.session_id,
         "current_question": first_question,
         "related_visa_types": engine.get_related_visa_types(first_question) if first_question else [],
-        "rules_status": engine._get_rules_display_info(),
+        "rules_status": engine.get_rules_display_info(),
         "is_complete": first_question is None
     }
 
@@ -57,7 +62,25 @@ async def answer_question(request: AnswerRequest):
     if not engine.current_question:
         raise HTTPException(status_code=400, detail="No current question")
 
+    # デバッグ: 回答ログ
+    print(f"\n{'='*60}")
+    print(f"質問: {engine.current_question}")
+    print(f"回答: {request.answer}")
+    print(f"{'='*60}")
+
     result = engine.answer_question(engine.current_question, request.answer)
+
+    # デバッグ: 回答後のルール状態
+    print(f"\n--- ルール状態 ---")
+    for rs in result["rules_status"]:
+        if rs["status"] != "pending":
+            cond_summary = ", ".join([
+                f"{c['text'][:20]}...={c['status']}" if len(c['text']) > 20 else f"{c['text']}={c['status']}"
+                for c in rs["conditions"]
+            ])
+            print(f"[{rs['visa_type']}] {rs['action'][:30]}... → {rs['status']}")
+            print(f"    条件: {cond_summary}")
+    print()
 
     response = {
         "session_id": request.session_id,
@@ -104,7 +127,7 @@ async def restart_consultation(request: StartRequest):
         "session_id": request.session_id,
         "current_question": first_question,
         "related_visa_types": engine.get_related_visa_types(first_question) if first_question else [],
-        "rules_status": engine._get_rules_display_info(),
+        "rules_status": engine.get_rules_display_info(),
         "is_complete": first_question is None
     }
 

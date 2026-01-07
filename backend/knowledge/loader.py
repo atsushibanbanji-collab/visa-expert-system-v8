@@ -3,9 +3,12 @@
 """
 import os
 import json
+import logging
 from typing import List
 
 from core import Rule, RuleType
+
+logger = logging.getLogger(__name__)
 
 # データファイルのパス
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
@@ -34,7 +37,7 @@ def load_rules_from_json() -> List[Rule]:
             rules.append(rule)
         return rules
     except Exception as e:
-        print(f"Warning: Failed to load rules from JSON: {e}")
+        logger.warning(f"Failed to load rules from JSON: {e}")
         return _get_fallback_rules()
 
 
@@ -46,7 +49,7 @@ def save_rules_to_json(rules_data: dict) -> bool:
             json.dump(rules_data, f, ensure_ascii=False, indent=2)
         return True
     except Exception as e:
-        print(f"Error saving rules: {e}")
+        logger.error(f"Error saving rules: {e}")
         return False
 
 

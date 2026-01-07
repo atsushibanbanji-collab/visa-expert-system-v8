@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { VISA_TYPES } from '../../constants';
 
 function AdminRuleCard({ rule, index, isNew, totalRules, onSave, onCancel, onDelete, onMoveUp, onMoveDown }) {
   const initialVisaType = rule.visa_type || 'E';
@@ -89,11 +90,9 @@ function AdminRuleCard({ rule, index, isNew, totalRules, onSave, onCancel, onDel
           <div className="rule-card-header">
             <span className="rule-number">#{isNew ? 'NEW' : index + 1}</span>
             <select className="rule-visa-select" value={formData.visa_type} onChange={(e) => updateField('visa_type', e.target.value)}>
-              <option value="E">E</option>
-              <option value="L">L</option>
-              <option value="H-1B">H-1B</option>
-              <option value="B">B</option>
-              <option value="J-1">J-1</option>
+              {VISA_TYPES.map(vt => (
+                <option key={vt} value={vt}>{vt}</option>
+              ))}
             </select>
             <select className="rule-type-select" value={formData.is_or_rule ? 'or' : 'and'} onChange={(e) => updateField('is_or_rule', e.target.value === 'or')}>
               <option value="and">AND</option>
