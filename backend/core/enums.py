@@ -31,7 +31,3 @@ class RuleStatus(Enum):
         """ルールが解決済み（発火、ブロック、または不確定）かどうか"""
         return status in (cls.FIRED, cls.BLOCKED, cls.UNCERTAIN)
 
-    @classmethod
-    def is_negative(cls, status: "RuleStatus") -> bool:
-        """ルールが否定的な結果（ブロックまたは不確定）かどうか"""
-        return status in (cls.BLOCKED, cls.UNCERTAIN)
