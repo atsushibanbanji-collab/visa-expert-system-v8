@@ -1,6 +1,6 @@
 import React from 'react';
 
-function RuleCard({ rule }) {
+function RuleCard({ rule, currentQuestion }) {
   const getStatusClass = (status) => {
     switch (status) {
       case 'fired': return 'rule-fired';
@@ -11,7 +11,7 @@ function RuleCard({ rule }) {
     }
   };
 
-  const getConditionClass = (condition) => {
+  const getConditionClass = (condition, isCurrent) => {
     let classes = 'condition-item';
     switch (condition.status) {
       case 'true': classes += ' condition-true'; break;
@@ -20,6 +20,7 @@ function RuleCard({ rule }) {
       default: classes += ' condition-unchecked';
     }
     if (condition.is_derived) classes += ' condition-derived';
+    if (isCurrent) classes += ' condition-current';
     return classes;
   };
 
@@ -54,17 +55,23 @@ function RuleCard({ rule }) {
         <div className="rule-card-conditions">
           <span className="label">IF:</span>
           <div className="conditions-list">
-            {rule.conditions.map((cond, idx) => (
-              <React.Fragment key={idx}>
-                <span className={getConditionClass(cond)}>
-                  {cond.is_derived && <span className="derived-marker">&#x25C6;</span>}
-                  {cond.text}
-                </span>
-                {idx < rule.conditions.length - 1 && (
-                  <span className="condition-operator">{rule.operator}</span>
-                )}
-              </React.Fragment>
-            ))}
+            {rule.conditions.map((cond, idx) => {
+              const isCurrent = cond.text === currentQuestion;
+              return (
+                <React.Fragment key={idx}>
+                  <span
+                    className={getConditionClass(cond, isCurrent)}
+                    data-current-condition={isCurrent ? 'true' : undefined}
+                  >
+                    {cond.is_derived && <span className="derived-marker">&#x25C6;</span>}
+                    {cond.text}
+                  </span>
+                  {idx < rule.conditions.length - 1 && (
+                    <span className="condition-operator">{rule.operator}</span>
+                  )}
+                </React.Fragment>
+              );
+            })}
           </div>
         </div>
       </div>

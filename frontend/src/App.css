@@ -586,6 +586,18 @@ body {
   border-left: 3px solid #805ad5;
 }
 
+.rule-card .condition-item.condition-current {
+  background: #ebf8ff;
+  border: 2px solid #3182ce;
+  box-shadow: 0 0 8px rgba(49, 130, 206, 0.4);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(49, 130, 206, 0.4); }
+  50% { box-shadow: 0 0 16px rgba(49, 130, 206, 0.6); }
+}
+
 .rule-card .derived-marker {
   color: #805ad5;
   margin-right: 4px;

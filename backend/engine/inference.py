@@ -169,8 +169,58 @@ class InferenceEngine:
                             changed = True
                             self._update_dependent_rules(action, FactStatus.FALSE)
 
+            # UNCERTAINルールのactionにUNKNOWNを伝播
+            # 条件: 同一actionの全ルールが解決済みで、FIREDなし、UNCERTAINあり
+            changed = self._propagate_uncertain_actions() or changed
+
             if not changed:
                 break
+
+    def _propagate_uncertain_actions(self) -> bool:
+        """UNCERTAINルールのactionにUNKNOWNを伝播"""
+        changed = False
+        processed_actions: Set[str] = set()
+
+        for state in self.rule_states.values():
+            action = state.rule.action
+            if action in processed_actions:
+                continue
+            processed_actions.add(action)
+
+            # このactionを導出する全ルールを取得
+            rules_for_action = [
+                s for s in self.rule_states.values()
+                if s.rule.action == action
+            ]
+
+            # 全ルールが解決済みかチェック
+            all_resolved = all(
+                RuleStatus.is_resolved(s.status) for s in rules_for_action
+            )
+            if not all_resolved:
+                continue
+
+            # FIREDがあればTRUEは既に伝播済み
+            has_fired = any(s.status == RuleStatus.FIRED for s in rules_for_action)
+            if has_fired:
+                continue
+
+            # 全てBLOCKEDならFALSEは既に伝播済み
+            all_blocked = all(s.status == RuleStatus.BLOCKED for s in rules_for_action)
+            if all_blocked:
+                continue
+
+            # FIREDなし、全てBLOCKEDではない（UNCERTAINあり）→ UNKNOWN
+            has_uncertain = any(s.status == RuleStatus.UNCERTAIN for s in rules_for_action)
+            if has_uncertain:
+                current_val = self.working_memory.get_value(action)
+                if current_val not in (FactStatus.TRUE, FactStatus.FALSE, FactStatus.UNKNOWN):
+                    self.working_memory.put_hypothesis(action, FactStatus.UNKNOWN)
+                    self.reasoning_log.append(f"推論: 「{action}」→ unknown（ルールが不確定）")
+                    changed = True
+                    self._update_dependent_rules(action, FactStatus.UNKNOWN)
+
+        return changed
 
     def _update_dependent_rules(self, condition: str, status: FactStatus):
         """条件のステータス変更に応じて依存ルールを更新"""
