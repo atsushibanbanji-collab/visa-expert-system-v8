@@ -981,26 +981,3 @@ body {
     font-size: 1rem;
   }
 }
-
-/* ==========================================================
-   開発用ビルド情報タグ（本番デプロイ時に削除）
-
-   削除対象:
-   - このCSSセクション
-   - components/DevBuildTag.js
-   - App.js の DevBuildTag インポートと使用
-   - backend/routes/dev.py
-   - backend/main.py の dev router
-   ========================================================== */
-.dev-build-tag {
-  position: fixed;
-  top: 8px;
-  right: 8px;
-  background: rgba(0, 0, 0, 0.7);
-  color: #90cdf4;
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  font-family: monospace;
-  z-index: 9999;
-}

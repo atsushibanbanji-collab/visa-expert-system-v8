@@ -5,8 +5,6 @@ import HomePage from './pages/HomePage';
 import ConsultationPage from './pages/ConsultationPage';
 import AdminPage from './pages/AdminPage';
 import { VisaTypeProvider } from './context/VisaTypeContext';
-// 開発用（本番デプロイ時に削除）
-import DevBuildTag from './components/DevBuildTag';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -14,8 +12,6 @@ function App() {
   return (
     <VisaTypeProvider>
     <div className="app">
-      {/* 開発用（本番デプロイ時に削除） */}
-      <DevBuildTag />
       <header className="header">
         <h1>ビザ選定エキスパートシステム</h1>
         <div className="header-actions">

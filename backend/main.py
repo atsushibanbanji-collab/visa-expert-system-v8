@@ -6,8 +6,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from routes.consultation import router as consultation_router
 from routes.rules import router as rules_router
-# 開発用（本番デプロイ時に削除）
-from routes.dev import router as dev_router
 
 app = FastAPI(
     title="ビザ選定エキスパートシステム",
@@ -27,8 +25,6 @@ app.add_middleware(
 # ルーターを登録
 app.include_router(consultation_router)
 app.include_router(rules_router)
-# 開発用（本番デプロイ時に削除）
-app.include_router(dev_router)
 
 
 @app.get("/")
