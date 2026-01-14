@@ -308,29 +308,18 @@ function AdminPage() {
       <div className="visa-type-section">
         <div className="visa-type-header" onClick={() => setVisaTypeExpanded(!visaTypeExpanded)}>
           <span className="expand-icon">{visaTypeExpanded ? '▼' : '▶'}</span>
-          <h3>ビザタイプ管理</h3>
+          <h3>ビザタイプ</h3>
           <span className="visa-type-count">{visaTypes.length}件</span>
         </div>
         {visaTypeExpanded && (
           <div className="visa-type-content">
             <div className="visa-type-list">
               {visaTypes.map((vt, index) => (
-                <div key={vt.code} className="visa-type-item">
-                  <div className="visa-type-move-buttons">
-                    <button
-                      className="move-btn"
-                      onClick={() => moveVisaType(index, -1)}
-                      disabled={index === 0}
-                      title="上へ移動"
-                    >↑</button>
-                    <button
-                      className="move-btn"
-                      onClick={() => moveVisaType(index, 1)}
-                      disabled={index === visaTypes.length - 1}
-                      title="下へ移動"
-                    >↓</button>
-                  </div>
-                  <div className="visa-type-fields">
+                <div key={vt.code} className="visa-type-card">
+                  <div className="visa-type-card-header">
+                    <button className="rule-move-btn" onClick={() => moveVisaType(index, -1)} disabled={index === 0}>↑</button>
+                    <button className="rule-move-btn" onClick={() => moveVisaType(index, 1)} disabled={index === visaTypes.length - 1}>↓</button>
+                    <span className="rule-number">#{index + 1}</span>
                     <input
                       type="text"
                       className="visa-type-code-input"
@@ -345,9 +334,8 @@ function AdminPage() {
                       onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
                       placeholder="コード"
                     />
-
+                    <button className="delete-btn" onClick={() => handleDeleteVisaType(vt.code)}>削除</button>
                   </div>
-                  <button className="delete-btn" onClick={() => handleDeleteVisaType(vt.code)}>削除</button>
                 </div>
               ))}
             </div>

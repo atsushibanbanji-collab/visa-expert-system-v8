@@ -12,7 +12,7 @@ function DiagnosisResult({ result, onGoBack, onRestart }) {
           <ul>
             {result.applicable_visas.map((visa, index) => (
               <li key={index} className="result-item applicable-visa">
-                <span className={`visa-badge visa-${visa.type.replace('-', '')}`}>{visa.type}</span>
+                <span className="visa-badge">{visa.type}</span>
                 <span className="visa-name">{visa.visa}</span>
               </li>
             ))}
@@ -27,7 +27,7 @@ function DiagnosisResult({ result, onGoBack, onRestart }) {
               <li key={index} className="result-item conditional-visa">
                 <p className="conditional-description">
                   以下の条件が満たされれば
-                  <span className={`visa-badge visa-${visa.type.replace('-', '')}`}>{visa.type}</span>
+                  <span className="visa-badge">{visa.type}</span>
                   での申請ができます
                 </p>
                 <ul className="unknown-conditions-list">

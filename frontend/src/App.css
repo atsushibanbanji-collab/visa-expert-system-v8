@@ -272,18 +272,13 @@ body {
 }
 
 .visa-tag {
+  background: #e2e8f0;
   padding: 4px 12px;
-  border-radius: 20px;
+  border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 600;
-  color: white;
+  color: #4a5568;
 }
-
-.visa-E { background: #3182ce; }
-.visa-L { background: #805ad5; }
-.visa-B { background: #38a169; }
-.visa-H1B { background: #dd6b20; }
-.visa-J1 { background: #d53f8c; }
 
 .question-text {
   font-size: 1.1rem;
@@ -714,19 +709,14 @@ body {
 }
 
 .visa-badge {
+  background: #e2e8f0;
   padding: 4px 12px;
-  border-radius: 20px;
+  border-radius: 4px;
   font-size: 0.8rem;
   font-weight: 600;
-  color: white;
+  color: #4a5568;
   flex-shrink: 0;
 }
-
-.visa-badge.visa-E { background: #3182ce; }
-.visa-badge.visa-L { background: #805ad5; }
-.visa-badge.visa-B { background: #38a169; }
-.visa-badge.visa-H1B { background: #dd6b20; }
-.visa-badge.visa-J1 { background: #d53f8c; }
 
 .visa-name {
   flex: 1;
@@ -743,7 +733,6 @@ body {
 
 .conditional-description .visa-badge {
   margin: 0 4px;
-  vertical-align: middle;
 }
 
 .unknown-conditions-list {

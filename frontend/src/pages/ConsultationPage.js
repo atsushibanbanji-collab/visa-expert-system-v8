@@ -145,7 +145,7 @@ function ConsultationPage({ onBack }) {
                 <div className="current-question">
                   <div className="visa-tags">
                     {relatedVisaTypes.map(vt => (
-                      <span key={vt} className={`visa-tag visa-${vt.replace('-', '')}`}>{vt}</span>
+                      <span key={vt} className="visa-tag">{vt}</span>
                     ))}
                   </div>
                   <p className="question-text">{currentQuestion}</p>
