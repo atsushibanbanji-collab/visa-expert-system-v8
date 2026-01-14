@@ -458,48 +458,64 @@
 .visa-type-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
+  padding: 8px 12px;
   background: #f7fafc;
   border-radius: 6px;
-  gap: 12px;
-}
-
-.visa-type-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1;
-  flex-wrap: wrap;
-}
-
-.visa-type-code {
-  font-weight: 700;
-  color: #2b6cb0;
-  min-width: 50px;
-}
-
-.visa-type-name {
-  color: #2d3748;
-}
-
-.visa-type-actions {
-  display: flex;
   gap: 8px;
 }
 
-.visa-type-actions .edit-btn {
-  padding: 4px 10px;
-  background: #ebf8ff;
-  color: #2b6cb0;
-  border: 1px solid #bee3f8;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.8rem;
+.visa-type-move-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.visa-type-actions .edit-btn:hover {
-  background: #bee3f8;
+.visa-type-move-buttons .move-btn {
+  width: 24px;
+  height: 18px;
+  padding: 0;
+  background: #edf2f7;
+  border: 1px solid #e2e8f0;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.visa-type-move-buttons .move-btn:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.visa-type-move-buttons .move-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.visa-type-fields {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.visa-type-code-input {
+  width: 70px;
+  padding: 6px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: white;
+}
+
+.visa-type-code-input:focus {
+  border-color: #3182ce;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(49, 130, 206, 0.2);
+}
+
+.visa-type-item .delete-btn {
+  flex-shrink: 0;
 }
 
 .add-visa-type-btn {
@@ -519,55 +535,38 @@
   color: #3182ce;
 }
 
-/* ビザタイプ編集フォーム */
+/* ビザタイプ追加フォーム */
 .visa-type-form {
-  background: #fffaf0;
-  border: 1px solid #ed8936;
-  border-radius: 6px;
-  padding: 12px;
-}
-
-.visa-type-form .form-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
+  padding: 8px 12px;
+  background: #fffaf0;
+  border: 1px solid #ed8936;
+  border-radius: 6px;
 }
 
-.visa-type-form .form-row label {
-  min-width: 50px;
-  font-size: 0.85rem;
-  color: #4a5568;
-}
-
-.visa-type-form .form-row input {
-  flex: 1;
+.visa-type-form .visa-type-code-input {
+  width: 80px;
   padding: 6px 10px;
   border: 1px solid #e2e8f0;
   border-radius: 4px;
   font-size: 0.9rem;
 }
 
-.visa-type-form .form-row input:disabled {
-  background: #edf2f7;
-  color: #718096;
-}
-
 .visa-type-form .form-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 6px;
 }
 
 .visa-type-form .save-btn {
-  flex: 1;
-  padding: 8px;
+  padding: 6px 12px;
   background: #48bb78;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-weight: 500;
+  font-size: 0.85rem;
 }
 
 .visa-type-form .save-btn:hover {
@@ -575,12 +574,12 @@
 }
 
 .visa-type-form .cancel-btn {
-  flex: 1;
-  padding: 8px;
+  padding: 6px 12px;
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 4px;
   cursor: pointer;
+  font-size: 0.85rem;
 }
 
 .visa-type-form .cancel-btn:hover {

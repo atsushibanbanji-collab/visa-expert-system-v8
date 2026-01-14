@@ -176,8 +176,7 @@ function ConsultationPage({ onBack }) {
             const visaRules = rulesStatus.filter(r => r.visa_type === visaType && r.status !== 'pending');
             if (visaRules.length === 0) return null;
             return (
-              <div key={visaType} className={`visa-section visa-section-${visaType.replace('-', '')}`}>
-                <h3 className="visa-section-title">{visaType}ビザ</h3>
+              <div key={visaType} className="visa-section">
                 {visaRules.map(rule => (
                   <RuleCard key={rule.action} rule={rule} currentQuestion={currentQuestion} />
                 ))}

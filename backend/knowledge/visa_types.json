@@ -2,27 +2,22 @@
   "visa_types": [
     {
       "code": "E",
-      "name": "Eビザ（投資家・貿易）",
       "order": 0
     },
     {
       "code": "L",
-      "name": "Lビザ（企業内転勤）",
       "order": 1
     },
     {
       "code": "H-1B",
-      "name": "H-1Bビザ（専門職）",
       "order": 2
     },
     {
       "code": "B",
-      "name": "Bビザ（商用）",
       "order": 3
     },
     {
       "code": "J-1",
-      "name": "J-1ビザ（研修）",
       "order": 4
     }
   ]

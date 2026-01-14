@@ -46,5 +46,4 @@ class ReorderRequest(BaseModel):
 
 class VisaTypeRequest(BaseModel):
     code: str
-    name: str
     order: Optional[int] = None

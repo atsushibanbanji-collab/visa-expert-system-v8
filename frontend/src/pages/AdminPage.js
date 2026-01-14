@@ -9,17 +9,25 @@ function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [filterVisaType, setFilterVisaType] = useState('');
   const [message, setMessage] = useState(null);
-  const [insertPosition, setInsertPosition] = useState(null); // null=非表示, 数値=挿入位置(その番号の後に挿入)
-  const [newRuleAtEnd, setNewRuleAtEnd] = useState(false); // 末尾追加用フォーム（先頭に表示、末尾に挿入）
+  const [insertPosition, setInsertPosition] = useState(null);
+  const [newRuleAtEnd, setNewRuleAtEnd] = useState(false);
   const pageRef = React.useRef(null);
 
   // ビザタイプ管理用state
   const [visaTypeExpanded, setVisaTypeExpanded] = useState(false);
-  const [editingVisaType, setEditingVisaType] = useState(null); // 編集中のビザタイプコード
-  const [newVisaType, setNewVisaType] = useState(null); // 新規追加フォーム
+  const [visaTypeEdits, setVisaTypeEdits] = useState({});
+  const [newVisaType, setNewVisaType] = useState(null);
+
+  // visaTypesが変更されたら編集状態を初期化
+  useEffect(() => {
+    const edits = {};
+    visaTypes.forEach(vt => {
+      edits[vt.code] = { code: vt.code };
+    });
+    setVisaTypeEdits(edits);
+  }, [visaTypes]);
 
   const scrollToTop = () => {
-    // Try both the element and window scroll
     if (pageRef.current) {
       pageRef.current.scrollTop = 0;
     }
@@ -188,16 +196,20 @@ function AdminPage() {
     }
   };
 
-  const handleUpdateVisaType = async (code, visaTypeData) => {
+  const handleUpdateVisaType = async (originalCode) => {
+    const editData = visaTypeEdits[originalCode];
+    if (!editData || !editData.code.trim()) {
+      setMessage({ type: 'error', text: 'コードは必須です' });
+      return;
+    }
     try {
-      const response = await fetch(`${API_BASE}/api/visa-types/${code}`, {
+      const response = await fetch(`${API_BASE}/api/visa-types/${originalCode}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(visaTypeData)
+        body: JSON.stringify({ code: editData.code })
       });
       if (response.ok) {
         reloadVisaTypes();
-        setEditingVisaType(null);
         setMessage({ type: 'success', text: 'ビザタイプを更新しました' });
       } else {
         const error = await response.json();
@@ -224,6 +236,41 @@ function AdminPage() {
     } catch (error) {
       setMessage({ type: 'error', text: '削除に失敗しました' });
     }
+  };
+
+  const moveVisaType = async (index, direction) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= visaTypes.length) return;
+
+    // orderを入れ替えて更新
+    const currentVt = visaTypes[index];
+    const targetVt = visaTypes[newIndex];
+
+    try {
+      await Promise.all([
+        fetch(`${API_BASE}/api/visa-types/${currentVt.code}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...currentVt, order: targetVt.order })
+        }),
+        fetch(`${API_BASE}/api/visa-types/${targetVt.code}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...targetVt, order: currentVt.order })
+        })
+      ]);
+      reloadVisaTypes();
+    } catch (error) {
+      console.error('Error moving visa type:', error);
+      setMessage({ type: 'error', text: '順序の変更に失敗しました' });
+    }
+  };
+
+  const handleVisaTypeEditChange = (originalCode, field, value) => {
+    setVisaTypeEdits(prev => ({
+      ...prev,
+      [originalCode]: { ...prev[originalCode], [field]: value }
+    }));
   };
 
   return (
@@ -267,26 +314,40 @@ function AdminPage() {
         {visaTypeExpanded && (
           <div className="visa-type-content">
             <div className="visa-type-list">
-              {visaTypes.map(vt => (
+              {visaTypes.map((vt, index) => (
                 <div key={vt.code} className="visa-type-item">
-                  {editingVisaType === vt.code ? (
-                    <VisaTypeForm
-                      initial={vt}
-                      onSave={(data) => handleUpdateVisaType(vt.code, data)}
-                      onCancel={() => setEditingVisaType(null)}
+                  <div className="visa-type-move-buttons">
+                    <button
+                      className="move-btn"
+                      onClick={() => moveVisaType(index, -1)}
+                      disabled={index === 0}
+                      title="上へ移動"
+                    >↑</button>
+                    <button
+                      className="move-btn"
+                      onClick={() => moveVisaType(index, 1)}
+                      disabled={index === visaTypes.length - 1}
+                      title="下へ移動"
+                    >↓</button>
+                  </div>
+                  <div className="visa-type-fields">
+                    <input
+                      type="text"
+                      className="visa-type-code-input"
+                      value={visaTypeEdits[vt.code]?.code ?? vt.code}
+                      onChange={(e) => handleVisaTypeEditChange(vt.code, 'code', e.target.value)}
+                      onBlur={() => {
+                        const edit = visaTypeEdits[vt.code];
+                        if (edit && edit.code !== vt.code) {
+                          handleUpdateVisaType(vt.code);
+                        }
+                      }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+                      placeholder="コード"
                     />
-                  ) : (
-                    <>
-                      <div className="visa-type-info">
-                        <span className="visa-type-code">{vt.code}</span>
-                        <span className="visa-type-name">{vt.name}</span>
-                      </div>
-                      <div className="visa-type-actions">
-                        <button className="edit-btn" onClick={() => setEditingVisaType(vt.code)}>編集</button>
-                        <button className="delete-btn" onClick={() => handleDeleteVisaType(vt.code)}>削除</button>
-                      </div>
-                    </>
-                  )}
+
+                  </div>
+                  <button className="delete-btn" onClick={() => handleDeleteVisaType(vt.code)}>削除</button>
                 </div>
               ))}
             </div>
@@ -295,7 +356,6 @@ function AdminPage() {
                 initial={newVisaType}
                 onSave={handleAddVisaType}
                 onCancel={() => setNewVisaType(null)}
-                isNew
               />
             ) : (
               <button className="add-visa-type-btn" onClick={() => setNewVisaType({ code: '', name: '', order: visaTypes.length })}>
@@ -311,7 +371,6 @@ function AdminPage() {
           <p className="loading-text">読み込み中...</p>
         ) : (
           <>
-            {/* 末尾追加用フォーム（先頭に表示） */}
             {newRuleAtEnd && (
               <AdminRuleCard
                 key="new-rule-end-top"
@@ -325,7 +384,6 @@ function AdminPage() {
               />
             )}
 
-            {/* 先頭への挿入ボタン */}
             {!newRuleAtEnd && (insertPosition === 0 ? (
               <AdminRuleCard
                 key="new-rule-0"
@@ -356,7 +414,6 @@ function AdminPage() {
                   onMoveDown={() => moveRule(index, 1)}
                 />
 
-                {/* 各ルールの後に挿入ボタン（末尾以外） */}
                 {index < rules.length - 1 && (
                   insertPosition === index + 1 ? (
                     <AdminRuleCard
@@ -378,7 +435,6 @@ function AdminPage() {
               </React.Fragment>
             ))}
 
-            {/* 末尾への挿入ボタン */}
             {insertPosition === rules.length ? (
               <AdminRuleCard
                 key="new-rule-end"
@@ -406,17 +462,16 @@ function AdminPage() {
   );
 }
 
-// ビザタイプ編集フォームコンポーネント
-function VisaTypeForm({ initial, onSave, onCancel, isNew = false }) {
+// 新規ビザタイプ追加フォーム
+function VisaTypeForm({ initial, onSave, onCancel }) {
   const [formData, setFormData] = useState({
     code: initial.code || '',
-    name: initial.name || '',
     order: initial.order ?? 0
   });
 
   const handleSubmit = () => {
-    if (!formData.code.trim() || !formData.name.trim()) {
-      alert('コードと名前は必須です');
+    if (!formData.code.trim()) {
+      alert('コードは必須です');
       return;
     }
     onSave(formData);
@@ -424,35 +479,16 @@ function VisaTypeForm({ initial, onSave, onCancel, isNew = false }) {
 
   return (
     <div className="visa-type-form">
-      <div className="form-row">
-        <label>コード:</label>
-        <input
-          type="text"
-          value={formData.code}
-          onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-          disabled={!isNew}
-          placeholder="例: O-1"
-        />
-      </div>
-      <div className="form-row">
-        <label>名前:</label>
-        <input
-          type="text"
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder="例: O-1ビザ（卓越能力）"
-        />
-      </div>
-      <div className="form-row">
-        <label>順序:</label>
-        <input
-          type="number"
-          value={formData.order}
-          onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })}
-        />
-      </div>
+      <input
+        type="text"
+        value={formData.code}
+        onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+        placeholder="コード"
+        className="visa-type-code-input"
+      />
+
       <div className="form-actions">
-        <button className="save-btn" onClick={handleSubmit}>{isNew ? '追加' : '保存'}</button>
+        <button className="save-btn" onClick={handleSubmit}>追加</button>
         <button className="cancel-btn" onClick={onCancel}>キャンセル</button>
       </div>
     </div>

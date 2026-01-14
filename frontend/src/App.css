@@ -391,20 +391,6 @@ body {
   margin-bottom: 24px;
 }
 
-.visa-section-title {
-  font-size: 1rem;
-  padding: 8px 16px;
-  border-radius: 6px;
-  margin-bottom: 12px;
-  color: white;
-}
-
-.visa-section-E .visa-section-title { background: #3182ce; }
-.visa-section-L .visa-section-title { background: #805ad5; }
-.visa-section-B .visa-section-title { background: #38a169; }
-.visa-section-H1B .visa-section-title { background: #dd6b20; }
-.visa-section-J1 .visa-section-title { background: #d53f8c; }
-
 /* ルールカード（推論画面） */
 .rule-card {
   background: white;
