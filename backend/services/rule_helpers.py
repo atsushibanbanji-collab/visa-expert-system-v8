@@ -9,7 +9,6 @@ def rule_to_dict(rule) -> dict:
         "conditions": rule.conditions,
         "action": rule.action,
         "is_or_rule": rule.is_or_rule,
-        "visa_type": rule.visa_type,
         "rule_type": rule.rule_type.value,
         "is_goal_action": rule.is_goal_action
     }
@@ -33,7 +32,6 @@ def request_to_dict(rule) -> dict:
         "conditions": rule.conditions,
         "action": rule.action,
         "is_or_rule": rule.is_or_rule,
-        "visa_type": rule.visa_type,
         "rule_type": rule.rule_type,
         "is_goal_action": rule.is_goal_action
     }

@@ -4,13 +4,11 @@ import './Admin.css';
 import HomePage from './pages/HomePage';
 import ConsultationPage from './pages/ConsultationPage';
 import AdminPage from './pages/AdminPage';
-import { VisaTypeProvider } from './context/VisaTypeContext';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
 
   return (
-    <VisaTypeProvider>
     <div className="app">
       <header className="header">
         <h1>ビザ選定エキスパートシステム</h1>
@@ -34,7 +32,6 @@ function App() {
       {currentPage === 'consultation' && <ConsultationPage onBack={() => setCurrentPage('home')} />}
       {currentPage === 'admin' && <AdminPage />}
     </div>
-    </VisaTypeProvider>
   );
 }
 

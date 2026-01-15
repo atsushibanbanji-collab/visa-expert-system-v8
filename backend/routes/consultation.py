@@ -45,7 +45,6 @@ async def start_consultation(request: StartRequest):
     return {
         "session_id": request.session_id,
         "current_question": first_question,
-        "related_visa_types": engine.get_related_visa_types(first_question) if first_question else [],
         "rules_status": engine.get_rules_display_info(),
         "is_complete": first_question is None
     }
@@ -78,14 +77,13 @@ async def answer_question(request: AnswerRequest):
                 f"{c['text'][:20]}...={c['status']}" if len(c['text']) > 20 else f"{c['text']}={c['status']}"
                 for c in rs["conditions"]
             ])
-            print(f"[{rs['visa_type']}] {rs['action'][:30]}... → {rs['status']}")
+            print(f"#{rs['index']+1} {rs['action'][:30]}... → {rs['status']}")
             print(f"    条件: {cond_summary}")
     print()
 
     response = {
         "session_id": request.session_id,
         "current_question": result["next_question"],
-        "related_visa_types": engine.get_related_visa_types(result["next_question"]) if result["next_question"] else [],
         "rules_status": result["rules_status"],
         "derived_facts": result["derived_facts"],
         "is_complete": result["is_complete"]
@@ -109,7 +107,6 @@ async def go_back(request: GoBackRequest):
     return {
         "session_id": request.session_id,
         "current_question": result["current_question"],
-        "related_visa_types": engine.get_related_visa_types(result["current_question"]) if result["current_question"] else [],
         "answered_questions": result["answered_questions"],
         "rules_status": result["rules_status"]
     }
@@ -126,7 +123,6 @@ async def restart_consultation(request: StartRequest):
     return {
         "session_id": request.session_id,
         "current_question": first_question,
-        "related_visa_types": engine.get_related_visa_types(first_question) if first_question else [],
         "rules_status": engine.get_rules_display_info(),
         "is_complete": first_question is None
     }
@@ -143,6 +139,5 @@ async def get_state(session_id: str):
 
     return {
         "session_id": session_id,
-        **state,
-        "related_visa_types": engine.get_related_visa_types(state["current_question"]) if state["current_question"] else []
+        **state
     }

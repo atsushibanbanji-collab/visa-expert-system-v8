@@ -27,7 +27,6 @@ class RuleRequest(BaseModel):
     conditions: List[str]
     action: str
     is_or_rule: bool = False
-    visa_type: str = ""
     rule_type: str = "i"  # "i" for INITIAL, "m" for MIDDLE
     is_goal_action: bool = False  # ゴールアクションかどうか
     index: Optional[int] = None  # 編集時の対象インデックス（0始まり）
@@ -40,10 +39,3 @@ class DeleteRequest(BaseModel):
 
 class ReorderRequest(BaseModel):
     actions: List[str]
-
-
-# ========== ビザタイプ管理関連 ==========
-
-class VisaTypeRequest(BaseModel):
-    code: str
-    order: Optional[int] = None

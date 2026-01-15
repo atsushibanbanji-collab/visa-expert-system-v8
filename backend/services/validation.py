@@ -2,29 +2,27 @@
 ルールの整合性チェック機能
 """
 from collections import Counter
-from typing import List, Optional
+from typing import List
 
-from knowledge import VISA_RULES, get_all_rules
+from knowledge import RULES, get_all_rules
 
 
 def find_rule_by_action(action: str):
     """actionでルールを検索"""
-    return next((r for r in VISA_RULES if r.action == action), None)
+    return next((r for r in RULES if r.action == action), None)
 
 
-def check_rules_integrity(visa_type: Optional[str] = None) -> List[dict]:
+def check_rules_integrity() -> List[dict]:
     """ルールの整合性をチェックし、問題のリストを返す"""
     rules = get_all_rules()
-    if visa_type:
-        rules = [r for r in rules if r.visa_type == visa_type]
 
     issues = []
-    all_actions = {r.action for r in VISA_RULES}
+    all_actions = {r.action for r in RULES}
 
     # 到達不能なルールをチェック
     for rule in rules:
         for cond in rule.conditions:
-            if cond in all_actions and not any(r.action == cond for r in VISA_RULES):
+            if cond in all_actions and not any(r.action == cond for r in RULES):
                 issues.append({
                     "type": "unreachable",
                     "action": rule.action,
@@ -58,7 +56,7 @@ def check_rules_integrity(visa_type: Optional[str] = None) -> List[dict]:
     # 孤立ルールをチェック（THENが他で使われていない + ゴールでもない）
     for rule in rules:
         if not rule.is_goal_action:
-            if not any(rule.action in r.conditions for r in VISA_RULES if r.action != rule.action):
+            if not any(rule.action in r.conditions for r in RULES if r.action != rule.action):
                 issues.append({
                     "type": "orphan",
                     "action": rule.action,
@@ -66,7 +64,7 @@ def check_rules_integrity(visa_type: Optional[str] = None) -> List[dict]:
                 })
 
     # actionの一意性をチェック
-    action_counts = Counter(r.action for r in VISA_RULES)
+    action_counts = Counter(r.action for r in RULES)
     for action, count in action_counts.items():
         if count > 1:
             issues.append({

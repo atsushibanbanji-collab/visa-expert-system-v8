@@ -1,14 +1,10 @@
 import React, { useState } from 'react';
-import { useVisaTypes } from '../../context/VisaTypeContext';
 
 function AdminRuleCard({ rule, index, isNew, totalRules, onSave, onCancel, onDelete, onMoveUp, onMoveDown }) {
-  const { visaTypeCodes } = useVisaTypes();
-  const initialVisaType = rule.visa_type || visaTypeCodes[0] || 'E';
   const [formData, setFormData] = useState({
     conditions: rule.conditions?.length ? rule.conditions : [''],
     action: rule.action || '',
     is_or_rule: rule.is_or_rule || false,
-    visa_type: initialVisaType,
     is_goal_action: rule.is_goal_action || false
   });
   const [hasChanges, setHasChanges] = useState(isNew);
@@ -70,7 +66,6 @@ function AdminRuleCard({ rule, index, isNew, totalRules, onSave, onCancel, onDel
       conditions: rule.conditions?.length ? rule.conditions : [''],
       action: rule.action || '',
       is_or_rule: rule.is_or_rule || false,
-      visa_type: rule.visa_type || visaTypeCodes[0] || 'E',
       is_goal_action: rule.is_goal_action || false
     });
     setHasChanges(false);
@@ -89,11 +84,6 @@ function AdminRuleCard({ rule, index, isNew, totalRules, onSave, onCancel, onDel
               </>
             )}
             <span className="rule-number">#{isNew ? 'NEW' : index + 1}</span>
-            <select className="rule-visa-select" value={formData.visa_type} onChange={(e) => updateField('visa_type', e.target.value)}>
-              {visaTypeCodes.map(vt => (
-                <option key={vt} value={vt}>{vt}</option>
-              ))}
-            </select>
             <select className="rule-type-select" value={formData.is_or_rule ? 'or' : 'and'} onChange={(e) => updateField('is_or_rule', e.target.value === 'or')}>
               <option value="and">AND</option>
               <option value="or">OR</option>

@@ -17,7 +17,6 @@ class Rule:
     action: str                # 結論部（一意な識別子）
     rule_type: RuleType        # ルールタイプ
     is_or_rule: bool = False   # OR条件かどうか
-    visa_type: str = ""        # 関連するビザタイプ
     is_goal_action: bool = False  # ゴールアクションかどうか
     flag: str = None           # 発火状態フラグ
 

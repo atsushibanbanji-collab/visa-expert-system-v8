@@ -265,21 +265,6 @@ body {
   margin-bottom: 24px;
 }
 
-.visa-tags {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.visa-tag {
-  background: #e2e8f0;
-  padding: 4px 12px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #4a5568;
-}
-
 .question-text {
   font-size: 1.1rem;
   color: #2d3748;
@@ -381,11 +366,6 @@ body {
   max-height: calc(100vh - 120px);
 }
 
-/* ビザセクション */
-.visa-section {
-  margin-bottom: 24px;
-}
-
 /* ルールカード（推論画面） */
 .rule-card {
   background: white;
@@ -425,15 +405,6 @@ body {
   font-size: 0.8rem;
   color: #718096;
   min-width: 32px;
-}
-
-.rule-card .rule-visa-badge {
-  background: #e2e8f0;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #4a5568;
 }
 
 .rule-card .rule-operator-badge {
@@ -708,16 +679,6 @@ body {
   align-items: flex-start;
 }
 
-.visa-badge {
-  background: #e2e8f0;
-  padding: 4px 12px;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #4a5568;
-  flex-shrink: 0;
-}
-
 .visa-name {
   flex: 1;
   min-width: 200px;
@@ -729,10 +690,6 @@ body {
   font-size: 0.95rem;
   color: #4a5568;
   margin-bottom: 12px;
-}
-
-.conditional-description .visa-badge {
-  margin: 0 4px;
 }
 
 .unknown-conditions-list {
@@ -900,17 +857,6 @@ body {
   .current-question {
     padding: 12px;
     margin-bottom: 12px;
-  }
-
-  .visa-tags {
-    flex-wrap: wrap;
-    gap: 4px;
-    margin-bottom: 12px;
-  }
-
-  .visa-tag {
-    font-size: 0.7rem;
-    padding: 3px 8px;
   }
 
   .question-text {

@@ -31,7 +31,6 @@ def load_rules_from_json() -> List[Rule]:
                 action=r["action"],
                 rule_type=RuleType(r.get("rule_type", "i")),
                 is_or_rule=r.get("is_or_rule", False),
-                visa_type=r.get("visa_type", ""),
                 is_goal_action=r.get("is_goal_action", False)
             )
             rules.append(rule)

@@ -1,14 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { API_BASE } from '../config';
-import { useVisaTypes } from '../context/VisaTypeContext';
 import RuleCard from '../components/consultation/RuleCard';
 import DiagnosisResult from '../components/consultation/DiagnosisResult';
 
 function ConsultationPage({ onBack }) {
-  const { visaTypeCodes } = useVisaTypes();
   const [sessionId] = useState(() => `session_${Date.now()}`);
   const [currentQuestion, setCurrentQuestion] = useState(null);
-  const [relatedVisaTypes, setRelatedVisaTypes] = useState([]);
   const [answeredQuestions, setAnsweredQuestions] = useState([]);
   const [rulesStatus, setRulesStatus] = useState([]);
   const [isComplete, setIsComplete] = useState(false);
@@ -37,7 +34,6 @@ function ConsultationPage({ onBack }) {
       }
 
       setCurrentQuestion(data.current_question);
-      setRelatedVisaTypes(data.related_visa_types || []);
       setRulesStatus(data.rules_status || []);
     } catch (error) {
       console.error('Error starting consultation:', error);
@@ -78,7 +74,6 @@ function ConsultationPage({ onBack }) {
       });
       const data = await response.json();
       setCurrentQuestion(data.current_question);
-      setRelatedVisaTypes(data.related_visa_types || []);
       setRulesStatus(data.rules_status || []);
       setIsComplete(data.is_complete);
       if (data.is_complete && data.diagnosis_result) {
@@ -101,7 +96,6 @@ function ConsultationPage({ onBack }) {
       });
       const data = await response.json();
       setCurrentQuestion(data.current_question);
-      setRelatedVisaTypes(data.related_visa_types || []);
       setRulesStatus(data.rules_status || []);
       setAnsweredQuestions(data.answered_questions?.map(q => ({
         question: q.condition,
@@ -114,6 +108,9 @@ function ConsultationPage({ onBack }) {
     }
     setLoading(false);
   };
+
+  // ルールをステータスでフィルタ（pendingは非表示）
+  const activeRules = rulesStatus.filter(r => r.status !== 'pending');
 
   return (
     <main className="main-content">
@@ -143,11 +140,6 @@ function ConsultationPage({ onBack }) {
             {currentQuestion && (
               <div className="question-section">
                 <div className="current-question">
-                  <div className="visa-tags">
-                    {relatedVisaTypes.map(vt => (
-                      <span key={vt} className="visa-tag">{vt}</span>
-                    ))}
-                  </div>
                   <p className="question-text">{currentQuestion}</p>
                 </div>
                 <div className="answer-buttons">
@@ -172,17 +164,9 @@ function ConsultationPage({ onBack }) {
           <h2>推論過程</h2>
         </div>
         <div className="rules-container" ref={containerRef}>
-          {visaTypeCodes.map(visaType => {
-            const visaRules = rulesStatus.filter(r => r.visa_type === visaType && r.status !== 'pending');
-            if (visaRules.length === 0) return null;
-            return (
-              <div key={visaType} className="visa-section">
-                {visaRules.map(rule => (
-                  <RuleCard key={rule.action} rule={rule} currentQuestion={currentQuestion} />
-                ))}
-              </div>
-            );
-          })}
+          {activeRules.map(rule => (
+            <RuleCard key={rule.action} rule={rule} currentQuestion={currentQuestion} />
+          ))}
         </div>
       </div>
     </main>

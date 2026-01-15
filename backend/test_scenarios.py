@@ -120,13 +120,13 @@ def run_random_test(test_number: int, answer_mode: str = "random", seed: int = N
     conditional = result.get("conditional_visas", [])
 
     if applicable:
-        visa_list = ", ".join([f"{v['type']}ビザ({v.get('rule_id', '?')})" for v in applicable])
+        visa_list = ", ".join([v['visa'] for v in applicable])
         output.append(f"  取得可能ビザ: {visa_list}")
     else:
         output.append(f"  取得可能ビザ: なし")
 
     if conditional:
-        visa_list = ", ".join([f"{v['type']}ビザ({v.get('rule_id', '?')})" for v in conditional])
+        visa_list = ", ".join([v['visa'] for v in conditional])
         output.append(f"  条件付き可能: {visa_list}")
     else:
         output.append(f"  条件付き可能: なし")
@@ -175,8 +175,8 @@ def main():
     all_output.extend(output)
     for line in output:
         print(line)
-    applicable = [f"{v['type']}({v.get('rule_id', '?')})" for v in result.get("applicable_visas", [])]
-    conditional = [f"{v['type']}({v.get('rule_id', '?')})" for v in result.get("conditional_visas", [])]
+    applicable = [v['visa'] for v in result.get("applicable_visas", [])]
+    conditional = [v['visa'] for v in result.get("conditional_visas", [])]
     results_summary.append({
         "test": 1,
         "mode": "全部UNKNOWN",
@@ -192,8 +192,8 @@ def main():
         all_output.extend(output)
         for line in output:
             print(line)
-        applicable = [f"{v['type']}({v.get('rule_id', '?')})" for v in result.get("applicable_visas", [])]
-        conditional = [f"{v['type']}({v.get('rule_id', '?')})" for v in result.get("conditional_visas", [])]
+        applicable = [v['visa'] for v in result.get("applicable_visas", [])]
+        conditional = [v['visa'] for v in result.get("conditional_visas", [])]
         results_summary.append({
             "test": i,
             "mode": f"ランダム(seed={seed})",

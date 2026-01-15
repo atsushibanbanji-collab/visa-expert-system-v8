@@ -3,36 +3,30 @@
 """
 from typing import List
 
-from core import Rule, VISA_TYPE_ORDER
+from core import Rule
 from .loader import load_rules_from_json, save_rules_to_json
 
 
 # グローバルルールストア（初回アクセス時にロード）
-VISA_RULES: List[Rule] = load_rules_from_json()
+RULES: List[Rule] = load_rules_from_json()
 
 
 def get_all_rules() -> List[Rule]:
     """全ルールを取得"""
-    return VISA_RULES.copy()
-
-
-def get_rules_by_visa_type(visa_type: str) -> List[Rule]:
-    """ビザタイプでルールをフィルタ"""
-    return [r for r in VISA_RULES if r.visa_type == visa_type]
+    return RULES.copy()
 
 
 def get_goal_rules() -> List[Rule]:
-    """ゴールルール（最終結論を導くルール）を取得（E→L→H-1B→B→J-1順）"""
-    goal_rules = [r for r in VISA_RULES if r.is_goal_action]
-    return sorted(goal_rules, key=lambda r: VISA_TYPE_ORDER.get(r.visa_type, 99))
+    """ゴールルール（最終結論を導くルール）を取得（rules.json順）"""
+    return [r for r in RULES if r.is_goal_action]
 
 
 def get_all_base_conditions() -> set:
     """全ての基本条件（他のルールの結論ではないもの）を取得"""
     all_conditions = set()
-    all_actions = {r.action for r in VISA_RULES}
+    all_actions = {r.action for r in RULES}
 
-    for rule in VISA_RULES:
+    for rule in RULES:
         for cond in rule.conditions:
             if cond not in all_actions:
                 all_conditions.add(cond)
@@ -42,7 +36,7 @@ def get_all_base_conditions() -> set:
 
 def get_derived_conditions() -> set:
     """導出可能な条件（他のルールの結論であるもの）を取得"""
-    return {r.action for r in VISA_RULES}
+    return {r.action for r in RULES}
 
 
 def reload_rules() -> List[Rule]:
@@ -51,11 +45,11 @@ def reload_rules() -> List[Rule]:
     注意: リストをin-place更新することで、
     他モジュールからimportされた参照も最新データを指すようになる
     """
-    global VISA_RULES
+    global RULES
     new_rules = load_rules_from_json()
-    VISA_RULES.clear()
-    VISA_RULES.extend(new_rules)
-    return VISA_RULES
+    RULES.clear()
+    RULES.extend(new_rules)
+    return RULES
 
 
 def save_rules(rules_data: dict) -> bool:

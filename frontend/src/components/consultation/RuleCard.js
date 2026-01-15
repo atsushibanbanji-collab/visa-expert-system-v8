@@ -38,7 +38,6 @@ function RuleCard({ rule, currentQuestion }) {
     <div className={`rule-card ${getStatusClass(rule.status)}`}>
       <div className="rule-card-header">
         <span className="rule-number">#{rule.index + 1}</span>
-        <span className="rule-visa-badge">{rule.visa_type}</span>
         <span className="rule-operator-badge">{rule.operator}</span>
         <span className={`rule-status-badge ${rule.status}`}>
           {getStatusLabel(rule.status)}

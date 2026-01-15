@@ -3,8 +3,8 @@
 """
 from typing import Dict, List, Optional, Set, Any
 
-from core import Rule, FactStatus, RuleStatus, VISA_TYPE_ORDER
-from knowledge import get_all_rules, get_goal_rules, get_derived_conditions, get_visa_type_codes
+from core import Rule, FactStatus, RuleStatus
+from knowledge import get_all_rules, get_goal_rules, get_derived_conditions
 from .working_memory import WorkingMemory, RuleState
 from .evaluator import RuleEvaluator
 
@@ -45,9 +45,7 @@ class InferenceEngine:
 
     def start_consultation(self) -> Optional[str]:
         """診断を開始"""
-        visa_codes = get_visa_type_codes()
-        visa_list = "、".join(visa_codes)
-        self.reasoning_log.append(f"診断を開始します。全ビザタイプ（{visa_list}）を並行評価します。")
+        self.reasoning_log.append("診断を開始します。全ゴールルールを並行評価します。")
         return self._get_next_question()
 
     def answer_question(self, condition: str, answer: str) -> Dict[str, Any]:
@@ -259,7 +257,6 @@ class InferenceEngine:
                 if state.status == RuleStatus.FIRED:
                     applicable_visas.append({
                         "visa": goal_rule.action,
-                        "type": goal_rule.visa_type,
                         "rule_id": goal_rule.id
                     })
                 elif state.status != RuleStatus.BLOCKED:
@@ -268,7 +265,6 @@ class InferenceEngine:
                     if relevant_unknowns:
                         conditional_visas.append({
                             "visa": goal_rule.action,
-                            "type": goal_rule.visa_type,
                             "rule_id": goal_rule.id,
                             "unknown_conditions": relevant_unknowns
                         })
@@ -331,7 +327,6 @@ class InferenceEngine:
                 "id": rule.id,
                 "index": rule_index_map.get(rule.id, 0),
                 "action": rule.action,
-                "visa_type": rule.visa_type,
                 "conditions": conditions_info,
                 "conclusion": rule.action,
                 "status": state.status.value,
@@ -339,7 +334,8 @@ class InferenceEngine:
                 "operator": "AND" if not rule.is_or_rule else "OR"
             })
 
-        result.sort(key=lambda r: VISA_TYPE_ORDER.get(r["visa_type"], 99))
+        # rules.json順でソート
+        result.sort(key=lambda r: r["index"])
         return result
 
     def go_back(self, steps: int = 1) -> Dict[str, Any]:
@@ -401,7 +397,3 @@ class InferenceEngine:
             result["diagnosis_result"] = self._generate_result()
 
         return result
-
-    def get_related_visa_types(self, condition: str) -> List[str]:
-        """条件に関連するビザタイプを取得"""
-        return list({r.visa_type for r in self.rules if condition in r.conditions})

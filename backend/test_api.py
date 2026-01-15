@@ -15,7 +15,6 @@ def test_basic_flow():
     resp = requests.post(BASE_URL + '/api/consultation/start', json={'session_id': session_id})
     data = resp.json()
     print('First question:', data.get('current_question'))
-    print('Related visas:', data.get('related_visa_types'))
 
     question_count = 0
     max_questions = 20
