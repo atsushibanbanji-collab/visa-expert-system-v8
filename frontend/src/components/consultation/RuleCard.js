@@ -26,8 +26,8 @@ function RuleCard({ rule, currentQuestion }) {
 
   const getStatusLabel = (status) => {
     switch (status) {
-      case 'fired': return '発火';
-      case 'blocked': return '不可';
+      case 'fired': return '成立';
+      case 'blocked': return '不成立';
       case 'uncertain': return '不明';
       case 'evaluating': return '評価中';
       default: return '待機';
