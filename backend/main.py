@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from routes.consultation import router as consultation_router
 from routes.rules import router as rules_router
+from routes.conditions import router as conditions_router
 
 app = FastAPI(
     title="ビザ選定エキスパートシステム",
@@ -25,6 +26,7 @@ app.add_middleware(
 # ルーターを登録
 app.include_router(consultation_router)
 app.include_router(rules_router)
+app.include_router(conditions_router)
 
 
 @app.get("/")

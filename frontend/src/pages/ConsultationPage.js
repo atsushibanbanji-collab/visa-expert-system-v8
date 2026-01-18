@@ -12,6 +12,7 @@ function ConsultationPage({ onBack }) {
   const [diagnosisResult, setDiagnosisResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [validationError, setValidationError] = useState(null);
+  const [currentNote, setCurrentNote] = useState('');
   const containerRef = useRef(null);
 
   const startConsultation = async () => {
@@ -61,6 +62,18 @@ function ConsultationPage({ onBack }) {
       });
     }
   }, [currentQuestion, rulesStatus]);
+
+  // 現在の質問の補足を取得
+  useEffect(() => {
+    if (currentQuestion) {
+      fetch(`${API_BASE}/api/conditions/note/${encodeURIComponent(currentQuestion)}`)
+        .then(res => res.json())
+        .then(data => setCurrentNote(data.note || ''))
+        .catch(() => setCurrentNote(''));
+    } else {
+      setCurrentNote('');
+    }
+  }, [currentQuestion]);
 
   const answerQuestion = async (answer) => {
     if (loading) return;
@@ -147,6 +160,9 @@ function ConsultationPage({ onBack }) {
                   <button className="answer-button no" onClick={() => answerQuestion('no')} disabled={loading}>いいえ</button>
                   <button className="answer-button unknown" onClick={() => answerQuestion('unknown')} disabled={loading}>わからない</button>
                 </div>
+                {currentNote && (
+                  <p className="question-note">{currentNote}</p>
+                )}
                 <div className="navigation-buttons">
                   <button className="nav-button" onClick={goBack} disabled={loading || answeredQuestions.length === 0}>
                     &#x2190; 前の質問に戻る

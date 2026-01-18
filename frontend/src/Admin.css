@@ -496,3 +496,105 @@
   margin-top: 20px;
   justify-content: flex-end;
 }
+
+/* ========== 質問管理画面 ========== */
+.conditions-page .header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.conditions-page .header-left h2 {
+  margin: 0;
+}
+
+.conditions-count {
+  font-size: 0.9rem;
+  color: #718096;
+}
+
+.conditions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.condition-card {
+  background: white;
+  border-radius: 6px;
+  padding: 12px 16px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.condition-card.has-note {
+  border-left: 3px solid #48bb78;
+}
+
+.condition-text {
+  font-size: 0.95rem;
+  color: #2d3748;
+  margin-bottom: 8px;
+}
+
+.condition-note-display {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.note-text {
+  flex: 1;
+  font-size: 0.85rem;
+  color: #4a5568;
+  background: #f7fafc;
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin: 0;
+}
+
+.note-empty {
+  flex: 1;
+  font-size: 0.85rem;
+  color: #a0aec0;
+  margin: 0;
+  font-style: italic;
+}
+
+.edit-note-btn {
+  padding: 4px 12px;
+  background: #edf2f7;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: #4a5568;
+}
+
+.edit-note-btn:hover {
+  background: #e2e8f0;
+}
+
+.condition-edit {
+  margin-top: 8px;
+}
+
+.condition-edit textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.condition-edit textarea:focus {
+  outline: none;
+  border-color: #3182ce;
+}
+
+.condition-edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}

@@ -4,6 +4,7 @@ import './Admin.css';
 import HomePage from './pages/HomePage';
 import ConsultationPage from './pages/ConsultationPage';
 import AdminPage from './pages/AdminPage';
+import ConditionsPage from './pages/ConditionsPage';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -20,7 +21,7 @@ function App() {
             診断
           </button>
           <button
-            className={`header-button ${currentPage === 'admin' ? 'active' : ''}`}
+            className={`header-button ${currentPage === 'admin' || currentPage === 'conditions' ? 'active' : ''}`}
             onClick={() => setCurrentPage('admin')}
           >
             ルール管理
@@ -30,7 +31,8 @@ function App() {
 
       {currentPage === 'home' && <HomePage onStartConsultation={() => setCurrentPage('consultation')} />}
       {currentPage === 'consultation' && <ConsultationPage onBack={() => setCurrentPage('home')} />}
-      {currentPage === 'admin' && <AdminPage />}
+      {currentPage === 'admin' && <AdminPage onGoToConditions={() => setCurrentPage('conditions')} />}
+      {currentPage === 'conditions' && <ConditionsPage onBack={() => setCurrentPage('admin')} />}
     </div>
   );
 }
