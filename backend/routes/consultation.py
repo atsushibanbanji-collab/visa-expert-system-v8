@@ -18,6 +18,8 @@ sessions: Dict[str, InferenceEngine] = {}
 @router.post("/start")
 async def start_consultation(request: StartRequest):
     """診断を開始"""
+    from core import FactStatus
+
     reload_rules()
 
     # 整合性チェック - エラーがあれば診断を開始できない
@@ -33,6 +35,13 @@ async def start_consultation(request: StartRequest):
         )
 
     engine = InferenceEngine()
+
+    # 問診票からのinitial_factsを適用
+    if request.initial_facts:
+        for fact in request.initial_facts:
+            status = FactStatus.TRUE if fact.value else FactStatus.FALSE
+            engine.working_memory.put_finding(fact.fact_name, status)
+
     first_question = engine.start_consultation()
 
     sessions[request.session_id] = engine
@@ -41,7 +50,8 @@ async def start_consultation(request: StartRequest):
         "session_id": request.session_id,
         "current_question": first_question,
         "rules_status": engine.get_rules_display_info(),
-        "is_complete": first_question is None
+        "is_complete": first_question is None,
+        "applied_initial_facts": [f.fact_name for f in request.initial_facts] if request.initial_facts else []
     }
 
 

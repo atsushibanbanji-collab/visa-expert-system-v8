@@ -1,0 +1,217 @@
+{
+  "questions": [
+    {
+      "id": "q1",
+      "text": "渡米の目的は赴任ですか？",
+      "answers": [
+        {
+          "value": "yes",
+          "label": "はい",
+          "next_question": "q2",
+          "initial_facts": []
+        },
+        {
+          "value": "no",
+          "label": "いいえ",
+          "next_question": "q6",
+          "initial_facts": []
+        }
+      ]
+    },
+    {
+      "id": "q2",
+      "text": "申請するビザは何ビザですか？",
+      "answers": [
+        {
+          "value": "e_visa",
+          "label": "Eビザ",
+          "next_question": "q3",
+          "initial_facts": []
+        },
+        {
+          "value": "blanket_l",
+          "label": "Blanket Lビザ",
+          "next_question": "q4",
+          "initial_facts": []
+        },
+        {
+          "value": "l_individual",
+          "label": "Lビザ（Individual）",
+          "next_question": "q5",
+          "initial_facts": []
+        },
+        {
+          "value": "h1b",
+          "label": "H-1Bビザ",
+          "next_question": null,
+          "initial_facts": []
+        },
+        {
+          "value": "unknown",
+          "label": "分からない",
+          "next_question": null,
+          "initial_facts": []
+        }
+      ]
+    },
+    {
+      "id": "q3",
+      "text": "会社がEビザの条件を満たしていますか？",
+      "answers": [
+        {
+          "value": "yes",
+          "label": "はい",
+          "next_question": null,
+          "initial_facts": [
+            {"fact_name": "会社がEビザの条件を満たします", "value": true}
+          ]
+        },
+        {
+          "value": "no",
+          "label": "いいえ",
+          "next_question": null,
+          "initial_facts": [
+            {"fact_name": "会社がEビザの条件を満たします", "value": false}
+          ]
+        },
+        {
+          "value": "unknown",
+          "label": "分からない",
+          "next_question": null,
+          "initial_facts": []
+        }
+      ]
+    },
+    {
+      "id": "q4",
+      "text": "会社がBlanket Lビザの条件を満たしていますか？",
+      "answers": [
+        {
+          "value": "yes",
+          "label": "はい",
+          "next_question": "q4a",
+          "initial_facts": [
+            {"fact_name": "会社がBlanket Lビザの条件を満たします", "value": true}
+          ]
+        },
+        {
+          "value": "no",
+          "label": "いいえ",
+          "next_question": null,
+          "initial_facts": [
+            {"fact_name": "会社がBlanket Lビザの条件を満たします", "value": false}
+          ]
+        },
+        {
+          "value": "unknown",
+          "label": "分からない",
+          "next_question": null,
+          "initial_facts": []
+        }
+      ]
+    },
+    {
+      "id": "q4a",
+      "text": "直近3年のうち1年以上、アメリカ以外のグループ会社に所属していましたか？",
+      "answers": [
+        {
+          "value": "yes",
+          "label": "はい",
+          "next_question": null,
+          "initial_facts": [
+            {"fact_name": "直近3年のうち1年以上、アメリカ以外のグループ会社に所属していました", "value": true}
+          ]
+        },
+        {
+          "value": "no",
+          "label": "いいえ",
+          "next_question": null,
+          "initial_facts": [
+            {"fact_name": "直近3年のうち1年以上、アメリカ以外のグループ会社に所属していました", "value": false}
+          ]
+        },
+        {
+          "value": "unknown",
+          "label": "分からない",
+          "next_question": null,
+          "initial_facts": []
+        }
+      ]
+    },
+    {
+      "id": "q5",
+      "text": "Lビザ（Individual）の条件を確認します。直近3年のうち1年以上、アメリカ以外のグループ会社に所属していましたか？",
+      "answers": [
+        {
+          "value": "yes",
+          "label": "はい",
+          "next_question": null,
+          "initial_facts": [
+            {"fact_name": "直近3年のうち1年以上、アメリカ以外のグループ会社に所属していました", "value": true}
+          ]
+        },
+        {
+          "value": "no",
+          "label": "いいえ",
+          "next_question": null,
+          "initial_facts": [
+            {"fact_name": "直近3年のうち1年以上、アメリカ以外のグループ会社に所属していました", "value": false}
+          ]
+        },
+        {
+          "value": "unknown",
+          "label": "分からない",
+          "next_question": null,
+          "initial_facts": []
+        }
+      ]
+    },
+    {
+      "id": "q6",
+      "text": "渡米の目的は出張ですか？",
+      "answers": [
+        {
+          "value": "yes",
+          "label": "はい",
+          "next_question": "q7",
+          "initial_facts": []
+        },
+        {
+          "value": "no",
+          "label": "いいえ",
+          "next_question": null,
+          "initial_facts": []
+        }
+      ]
+    },
+    {
+      "id": "q7",
+      "text": "出張中に商用の範囲を超えた作業（生産的労働）が発生しますか？",
+      "answers": [
+        {
+          "value": "yes",
+          "label": "はい",
+          "next_question": null,
+          "initial_facts": [
+            {"fact_name": "出張中商用の範囲を超えた作業が発生します", "value": true}
+          ]
+        },
+        {
+          "value": "no",
+          "label": "いいえ",
+          "next_question": null,
+          "initial_facts": [
+            {"fact_name": "出張中商用の範囲を超えた作業が発生します", "value": false}
+          ]
+        },
+        {
+          "value": "unknown",
+          "label": "分からない",
+          "next_question": null,
+          "initial_facts": []
+        }
+      ]
+    }
+  ],
+  "start_question": "q1"
+}

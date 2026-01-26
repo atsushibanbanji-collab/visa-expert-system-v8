@@ -3,7 +3,7 @@ import { API_BASE } from '../config';
 import RuleCard from '../components/consultation/RuleCard';
 import DiagnosisResult from '../components/consultation/DiagnosisResult';
 
-function ConsultationPage({ onBack }) {
+function ConsultationPage({ onBack, initialFacts = [] }) {
   const [sessionId] = useState(() => `session_${Date.now()}`);
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [answeredQuestions, setAnsweredQuestions] = useState([]);
@@ -22,7 +22,10 @@ function ConsultationPage({ onBack }) {
       const response = await fetch(`${API_BASE}/api/consultation/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sessionId })
+        body: JSON.stringify({
+          session_id: sessionId,
+          initial_facts: initialFacts
+        })
       });
       const data = await response.json();
 

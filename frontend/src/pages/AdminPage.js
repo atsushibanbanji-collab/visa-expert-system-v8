@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { API_BASE } from '../config';
 import AdminRuleCard from '../components/admin/AdminRuleCard';
 
-function AdminPage({ onGoToConditions }) {
+function AdminPage({ onGoToConditions, onGoToQuestionnaire }) {
   const [rules, setRules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState(null);
@@ -241,6 +241,9 @@ function AdminPage({ onGoToConditions }) {
           </button>
           <button className="admin-button" onClick={onGoToConditions}>
             質問管理
+          </button>
+          <button className="admin-button" onClick={onGoToQuestionnaire}>
+            問診票管理
           </button>
           <input
             type="file"

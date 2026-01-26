@@ -7,8 +7,14 @@ from typing import List, Optional
 
 # ========== 診断関連 ==========
 
+class InitialFact(BaseModel):
+    fact_name: str
+    value: bool
+
+
 class StartRequest(BaseModel):
     session_id: str
+    initial_facts: List[InitialFact] = []
 
 
 class AnswerRequest(BaseModel):
